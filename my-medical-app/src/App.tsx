@@ -9,7 +9,7 @@ interface FacilityFunctionEntry {
   function: {
     id: number;
     name: string;
-    selection_type?: 'single' | 'multi'; // 選択肢のタイプ
+    selection_type?: 'single' | 'multiple'; // 選択肢のタイプ
     choices?: string[]; // 選択肢
   };
 }
@@ -29,7 +29,7 @@ interface Facility {
 interface FunctionMaster {
   id: number;
   name: string;
-  selection_type?: 'single' | 'multi';
+  selection_type?: 'single' | 'multiple';
   choices?: string[];
 }
 
@@ -47,7 +47,7 @@ export default function App() {
   const [isFunctionModalOpen, setIsFunctionModalOpen] = useState(false);
   const [isFunctionMasterModalOpen, setIsFunctionMasterModalOpen] = useState(false);
   const [newFunctionName, setNewFunctionName] = useState('');
-  const [newSelectionType, setNewSelectionType] = useState<'single' | 'multi'>('single');
+  const [newSelectionType, setNewSelectionType] = useState<'single' | 'multiple'>('single');
   const [newChoices, setNewChoices] = useState<string>('');
   const [modalSearchText, setModalSearchText] = useState('');
 
