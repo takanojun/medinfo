@@ -2,6 +2,8 @@ from pydantic import BaseModel
 from typing import Optional, List
 
 class FunctionBase(BaseModel):
+    """機能マスタの基本スキーマ (読み取り用)"""
+
     id: int
     name: str
     description: Optional[str]
@@ -10,6 +12,16 @@ class FunctionBase(BaseModel):
 
     class Config:
         from_attributes = True
+
+class FunctionCreate(BaseModel):
+    """機能マスタ登録用のスキーマ
+    POST 時は自動採番されるため id フィールドは含めない"""
+
+    name: str
+    description: Optional[str] = None
+    selection_type: str
+    choices: List[str] = []
+
 
 class FacilityFunctionEntryBase(BaseModel):
     id: int
