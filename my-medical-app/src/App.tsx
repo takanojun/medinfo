@@ -495,14 +495,19 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => {
-                    // 保存リクエスト
+                    // 機能マスタ登録APIへPOST
                     fetch('http://192.168.174.29:8001/functions', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
+                        // API側はIDを要求しない
                         name: newFunctionName,
                         selection_type: newSelectionType,
-                        choices: newChoices.split(',').map(c => c.trim()).filter(c => c),
+                        // カンマ区切り文字列を配列に変換して送信
+                        choices: newChoices
+                          .split(',')
+                          .map(c => c.trim())
+                          .filter(c => c),
                       }),
                     })
                       .then((res) => res.json())

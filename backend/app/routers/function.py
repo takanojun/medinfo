@@ -24,7 +24,9 @@ def read_functions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
 
 # 機能マスタ新規作成（POST /functions）
 @router.post("", response_model=schemas.FunctionBase)
-def create_function(function: schemas.FunctionBase, db: Session = Depends(get_db)):
+def create_function(function: schemas.FunctionCreate, db: Session = Depends(get_db)):
+    """新しい機能マスタを登録するAPI
+    POST 時には ID を含めないため、FunctionCreate スキーマを利用する"""
     db_function = models.Function(**function.dict())
     db.add(db_function)
     db.commit()
