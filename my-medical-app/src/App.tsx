@@ -53,6 +53,7 @@ export default function App() {
 
   // 機能編集モーダル用
   const [editingEntry, setEditingEntry] = useState<FacilityFunctionEntry | null>(null);
+  const [editingFacilityId, setEditingFacilityId] = useState<number | null>(null);
   
   useEffect(() => {
     fetch('http://192.168.174.29:8001/facilities')
@@ -132,30 +133,49 @@ export default function App() {
 
     if (entry) {
       setEditingEntry(entry);
+      setEditingFacilityId(facilityId);
       setIsFunctionModalOpen(true);
     }
   };
 
 
   const handleSaveFunctionEntry = () => {
-    if (!editingEntry) return;
-    fetch(`http://192.168.174.29:8001/facility-function-entries/${editingEntry.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editingEntry),
-    })
-      .then(res => res.json())
+    if (!editingEntry || editingFacilityId === null) return;
+
+    const payload = {
+      selected_values: editingEntry.selected_values,
+      remarks: editingEntry.remarks,
+    };
+
+    const request =
+      editingEntry.id === 0
+        ? fetch('http://192.168.174.29:8001/facility-function-entries', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              facility_id: editingFacilityId,
+              function_id: editingEntry.function.id,
+              ...payload,
+            }),
+          })
+        : fetch(
+            `http://192.168.174.29:8001/facility-function-entries/${editingEntry.id}`,
+            {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            },
+          );
+
+    request
+      .then((res) => res.json())
       .then(() => {
-        // 保存成功時にモーダルを閉じる
         setIsFunctionModalOpen(false);
-        
-        // 保存成功後に再取得
         fetch('http://192.168.174.29:8001/facilities')
-          .then(res => res.json())
-          .then(data => setFacilities(data));
-        setIsModalOpen(false);
+          .then((res) => res.json())
+          .then((data) => setFacilities(data));
       })
-      .catch(err => console.error('保存エラー:', err));
+      .catch((err) => console.error('保存エラー:', err));
   };
 
   // 検索フィルタ
@@ -191,7 +211,9 @@ export default function App() {
       aVal = aFunc ? aFunc.selected_values.join(', ') : '';
       bVal = bFunc ? bFunc.selected_values.join(', ') : '';
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       aVal = (a as any)[sortKey] || '';
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       bVal = (b as any)[sortKey] || '';
       if (Array.isArray(aVal)) aVal = aVal.join(', ');
       if (Array.isArray(bVal)) bVal = bVal.join(', ');
@@ -276,6 +298,7 @@ export default function App() {
                         </td>
                       );
                     } else {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       const val = (facility as any)[col.key];
                       return (
                         <td
@@ -406,6 +429,50 @@ export default function App() {
                       } inline-block h-4 w-4 transform rounded-full bg-white shadow transition`}
                     />
                   </Switch>
+
+                  {/* 選択肢 */}
+                  {editingEntry.function.choices && editingEntry.selected_values.length > 0 && (
+                    <div className="mb-4">
+                      {editingEntry.function.selection_type === 'single' ? (
+                        <select
+                          className="border p-2 w-full"
+                          value={editingEntry.selected_values[0] || ''}
+                          onChange={(e) =>
+                            setEditingEntry((prev) =>
+                              prev ? { ...prev, selected_values: [e.target.value] } : prev
+                            )
+                          }
+                        >
+                          {editingEntry.function.choices.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="space-y-1">
+                          {editingEntry.function.choices.map((c) => (
+                            <label key={c} className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={editingEntry.selected_values.includes(c)}
+                                onChange={() =>
+                                  setEditingEntry((prev) => {
+                                    if (!prev) return prev;
+                                    const values = prev.selected_values.includes(c)
+                                      ? prev.selected_values.filter((v) => v !== c)
+                                      : [...prev.selected_values, c];
+                                    return { ...prev, selected_values: values };
+                                  })
+                                }
+                              />
+                              <span>{c}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* 備考欄 */}
                   <textarea
