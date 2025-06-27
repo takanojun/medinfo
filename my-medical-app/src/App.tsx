@@ -293,7 +293,9 @@ export default function App() {
                           }
                         >
                           {fEntry
-                            ? `${fEntry.selected_values.join(', ')}（${fEntry.remarks || '備考なし'}）`
+                            ? fEntry.selected_values.length || fEntry.remarks
+                              ? `${fEntry.selected_values.join(', ')}${fEntry.remarks ? `（${fEntry.remarks}）` : ''}`
+                              : '-'
                             : '-'}
                         </td>
                       );
@@ -404,73 +406,44 @@ export default function App() {
               </h3>
               {editingEntry && (
                 <div>
-                  <Switch
-                    checked={!!editingEntry.selected_values.length}
-                    onChange={(v) => {
-                      setEditingEntry((prev) => {
-                        if (!prev) return prev;
-                        return {
-                          ...prev,
-                          selected_values: v
-                            ? prev.function.choices && prev.function.choices.length > 0
-                              ? [prev.function.choices[0]] // 例: 最初の選択肢をデフォルトで選択
-                              : []
-                            : [], // OFFの時は空配列
-                        };
-                      });
-                    }}
-                    className={`${
-                      editingEntry.selected_values.length ? 'bg-green-500' : 'bg-gray-300'
-                    } relative inline-flex h-6 w-11 items-center rounded-full mb-4`}
-                  >
-                    <span
+                  {editingEntry.function.selection_type === 'single' ? (
+                    <Switch
+                      checked={editingEntry.selected_values[0] === '〇'}
+                      onChange={(v) =>
+                        setEditingEntry((prev) =>
+                          prev ? { ...prev, selected_values: [v ? '〇' : '×'] } : prev
+                        )
+                      }
                       className={`${
-                        editingEntry.selected_values.length ? 'translate-x-6' : 'translate-x-1'
-                      } inline-block h-4 w-4 transform rounded-full bg-white shadow transition`}
-                    />
-                  </Switch>
-
-                  {/* 選択肢 */}
-                  {editingEntry.function.choices && editingEntry.selected_values.length > 0 && (
-                    <div className="mb-4">
-                      {editingEntry.function.selection_type === 'single' ? (
-                        <select
-                          className="border p-2 w-full"
-                          value={editingEntry.selected_values[0] || ''}
-                          onChange={(e) =>
-                            setEditingEntry((prev) =>
-                              prev ? { ...prev, selected_values: [e.target.value] } : prev
-                            )
-                          }
-                        >
-                          {editingEntry.function.choices.map((c) => (
-                            <option key={c} value={c}>
-                              {c}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <div className="space-y-1">
-                          {editingEntry.function.choices.map((c) => (
-                            <label key={c} className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                checked={editingEntry.selected_values.includes(c)}
-                                onChange={() =>
-                                  setEditingEntry((prev) => {
-                                    if (!prev) return prev;
-                                    const values = prev.selected_values.includes(c)
-                                      ? prev.selected_values.filter((v) => v !== c)
-                                      : [...prev.selected_values, c];
-                                    return { ...prev, selected_values: values };
-                                  })
-                                }
-                              />
-                              <span>{c}</span>
-                            </label>
-                          ))}
-                        </div>
-                      )}
+                        editingEntry.selected_values[0] === '〇' ? 'bg-green-500' : 'bg-gray-300'
+                      } relative inline-flex h-6 w-11 items-center rounded-full mb-4`}
+                    >
+                      <span
+                        className={`${
+                          editingEntry.selected_values[0] === '〇' ? 'translate-x-6' : 'translate-x-1'
+                        } inline-block h-4 w-4 transform rounded-full bg-white shadow transition`}
+                      />
+                    </Switch>
+                  ) : (
+                    <div className="space-y-1 mb-4">
+                      {editingEntry.function.choices?.map((c) => (
+                        <label key={c} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={editingEntry.selected_values.includes(c)}
+                            onChange={() =>
+                              setEditingEntry((prev) => {
+                                if (!prev) return prev;
+                                const values = prev.selected_values.includes(c)
+                                  ? prev.selected_values.filter((v) => v !== c)
+                                  : [...prev.selected_values, c];
+                                return { ...prev, selected_values: values };
+                              })
+                            }
+                          />
+                          <span>{c}</span>
+                        </label>
+                      ))}
                     </div>
                   )}
 
