@@ -14,6 +14,7 @@ class MedicalFacility(Base):
     address_detail = Column(Text)
     phone_numbers = Column(ARRAY(Text))
     fax = Column(Text)
+    remarks = Column(Text)
 
     # 関連する機能情報をリレーションで持たせる
     functions = relationship("FacilityFunctionEntry", back_populates="facility", cascade="all, delete-orphan")

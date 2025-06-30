@@ -40,6 +40,7 @@ class MedicalFacilityBase(BaseModel):
     address_detail: Optional[str]
     phone_numbers: Optional[List[str]]
     fax: Optional[str]
+    remarks: Optional[str]
 
 class MedicalFacility(MedicalFacilityBase):
     id: int
@@ -56,6 +57,7 @@ class MedicalFacilityUpdate(BaseModel):
     address_detail: Optional[str] = None
     phone_numbers: Optional[List[str]] = None
     fax: Optional[str] = None
+    remarks: Optional[str] = None
 
 class FacilityFunctionEntryCreate(BaseModel):
     facility_id: int
