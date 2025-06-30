@@ -1,5 +1,5 @@
 // App.tsx
-import { useEffect, useState, Fragment } from 'react';
+import React, { useEffect, useState, Fragment } from 'react';
 import { Dialog, Transition, Switch } from '@headlessui/react';
 
 const setCookie = (name: string, value: string) => {
@@ -62,6 +62,10 @@ export default function App() {
   const [newSelectionType, setNewSelectionType] = useState<'single' | 'multiple'>('single');
   const [newChoices, setNewChoices] = useState<string>('');
   const [modalSearchText, setModalSearchText] = useState('');
+
+  // 医療機関編集モーダル用
+  const [isFacilityModalOpen, setIsFacilityModalOpen] = useState(false);
+  const [editingFacility, setEditingFacility] = useState<Facility | null>(null);
 
   // 機能編集モーダル用
   const [editingEntry, setEditingEntry] = useState<FacilityFunctionEntry | null>(null);
@@ -145,7 +149,11 @@ export default function App() {
     }
   };
 
-  const handleRightClick = (e, facilityId, funcId) => {
+  const handleRightClick = (
+    e: React.MouseEvent<HTMLTableCellElement, MouseEvent>,
+    facilityId: number,
+    funcId: number
+  ) => {
     e.preventDefault();
     const facility = facilities.find((f) => f.id === facilityId);
     let entry = facility?.functions.find((f) => f.function.id === funcId);
@@ -168,6 +176,54 @@ export default function App() {
       setEditingFacilityId(facilityId);
       setIsFunctionModalOpen(true);
     }
+  };
+
+  const handleFacilityCellRightClick = (
+    e: React.MouseEvent<HTMLTableCellElement, MouseEvent>,
+    facility: Facility
+  ) => {
+    e.preventDefault();
+    setEditingFacility({ ...facility });
+    setIsFacilityModalOpen(true);
+  };
+
+  const handleSaveFacility = () => {
+    if (!editingFacility) return;
+
+    const payload = {
+      short_name: editingFacility.short_name,
+      official_name: editingFacility.official_name,
+      prefecture: editingFacility.prefecture,
+      city: editingFacility.city,
+      address_detail: editingFacility.address_detail,
+      phone_numbers: editingFacility.phone_numbers,
+      fax: editingFacility.fax,
+      remarks: editingFacility.remarks,
+    };
+
+    const request =
+      editingFacility.id === 0
+        ? fetch('http://192.168.174.29:8001/facilities', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+        : fetch(`http://192.168.174.29:8001/facilities/${editingFacility.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+
+    request
+      .then((res) => res.json())
+      .then(() => {
+        setIsFacilityModalOpen(false);
+        setEditingFacility(null);
+        fetch('http://192.168.174.29:8001/facilities')
+          .then((res) => res.json())
+          .then((data) => setFacilities(data));
+      })
+      .catch((err) => console.error('保存エラー:', err));
   };
 
 
@@ -282,6 +338,26 @@ export default function App() {
         </button>
         <button
           className="px-4 py-2 bg-green-500 text-white rounded"
+          onClick={() => {
+            setEditingFacility({
+              id: 0,
+              short_name: '',
+              official_name: '',
+              prefecture: '',
+              city: '',
+              address_detail: '',
+              phone_numbers: [],
+              fax: '',
+              remarks: '',
+              functions: [],
+            });
+            setIsFacilityModalOpen(true);
+          }}
+        >
+          新規医療機関追加
+        </button>
+        <button
+          className="px-4 py-2 bg-green-500 text-white rounded"
           onClick={() => setIsFunctionMasterModalOpen(true)}
         >
     新規機能マスタ追加
@@ -339,6 +415,7 @@ export default function App() {
                         <td
                           key={col.key}
                           className="py-2 px-4 border whitespace-nowrap"
+                          onContextMenu={(e) => handleFacilityCellRightClick(e, facility)}
                         >
                           {Array.isArray(val) ? val.join(', ') : val || '-'}
                         </td>
@@ -427,7 +504,113 @@ export default function App() {
           </div>
         </Dialog>
       </Transition>
-      
+
+      {/* 医療機関編集モーダル */}
+      <Transition appear show={isFacilityModalOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-10" onClose={() => setIsFacilityModalOpen(false)}>
+          <div className="fixed inset-0 bg-black bg-opacity-25" />
+          <div className="fixed inset-0 overflow-y-auto flex items-center justify-center p-4">
+            <Dialog.Panel className="w-full max-w-md bg-white rounded p-6 shadow">
+              <h3 className="text-lg font-bold mb-4">
+                {editingFacility?.id === 0 ? '新規医療機関追加' : `医療機関編集: ${editingFacility?.short_name}`}
+              </h3>
+              {editingFacility && (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    placeholder="略名"
+                    value={editingFacility.short_name}
+                    onChange={(e) =>
+                      setEditingFacility({ ...editingFacility, short_name: e.target.value })
+                    }
+                    className="border p-2 w-full"
+                  />
+                  <input
+                    type="text"
+                    placeholder="正式名称"
+                    value={editingFacility.official_name || ''}
+                    onChange={(e) =>
+                      setEditingFacility({ ...editingFacility, official_name: e.target.value })
+                    }
+                    className="border p-2 w-full"
+                  />
+                  <input
+                    type="text"
+                    placeholder="都道府県"
+                    value={editingFacility.prefecture || ''}
+                    onChange={(e) =>
+                      setEditingFacility({ ...editingFacility, prefecture: e.target.value })
+                    }
+                    className="border p-2 w-full"
+                  />
+                  <input
+                    type="text"
+                    placeholder="市町村"
+                    value={editingFacility.city || ''}
+                    onChange={(e) => setEditingFacility({ ...editingFacility, city: e.target.value })}
+                    className="border p-2 w-full"
+                  />
+                  <input
+                    type="text"
+                    placeholder="住所詳細"
+                    value={editingFacility.address_detail || ''}
+                    onChange={(e) =>
+                      setEditingFacility({ ...editingFacility, address_detail: e.target.value })
+                    }
+                    className="border p-2 w-full"
+                  />
+                  <input
+                    type="text"
+                    placeholder="電話番号(カンマ区切り)"
+                    value={editingFacility.phone_numbers.join(', ')}
+                    onChange={(e) =>
+                      setEditingFacility({
+                        ...editingFacility,
+                        phone_numbers: e.target.value
+                          .split(',')
+                          .map((v) => v.trim())
+                          .filter((v) => v),
+                      })
+                    }
+                    className="border p-2 w-full"
+                  />
+                  <input
+                    type="text"
+                    placeholder="FAX"
+                    value={editingFacility.fax || ''}
+                    onChange={(e) => setEditingFacility({ ...editingFacility, fax: e.target.value })}
+                    className="border p-2 w-full"
+                  />
+                  <textarea
+                    placeholder="備考"
+                    value={editingFacility.remarks || ''}
+                    onChange={(e) =>
+                      setEditingFacility({ ...editingFacility, remarks: e.target.value })
+                    }
+                    className="border p-2 w-full"
+                  />
+
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      onClick={() => setIsFacilityModalOpen(false)}
+                      className="px-4 py-2 bg-gray-500 text-white rounded mr-2"
+                    >
+                      キャンセル
+                    </button>
+                    <button
+                      onClick={handleSaveFacility}
+                      className="px-4 py-2 bg-blue-500 text-white rounded"
+                    >
+                      保存
+                    </button>
+                  </div>
+                </div>
+              )}
+            </Dialog.Panel>
+          </div>
+        </Dialog>
+      </Transition>
+
       {/* 機能編集モーダル */}
       <Transition appear show={isFunctionModalOpen} as={Fragment}>
         <Dialog as="div" className="relative z-10" onClose={() => setIsFunctionModalOpen(false)}>
