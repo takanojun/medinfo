@@ -20,12 +20,15 @@ def get_db():
 
 # 医療機関一覧を取得（GET /facilities）
 @router.get("", response_model=List[schemas.MedicalFacility])
-def read_facilities(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+def read_facilities(skip: int = 0, limit: int | None = None, db: Session = Depends(get_db)):
     """
     医療機関情報の一覧を取得するAPI。
     ページネーションとして skip / limit を指定可能。
     """
-    facilities = db.query(models.MedicalFacility).offset(skip).limit(limit).all()
+    query = db.query(models.MedicalFacility).offset(skip)
+    if limit is not None:
+        query = query.limit(limit)
+    facilities = query.all()
     return facilities
 
 # 医療機関を新規登録（POST /facilities）

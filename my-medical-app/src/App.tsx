@@ -2,10 +2,21 @@
 import { useEffect, useState, Fragment } from 'react';
 import { Dialog, Transition, Switch } from '@headlessui/react';
 
+const setCookie = (name: string, value: string) => {
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/`;
+};
+
+const getCookie = (name: string): string | null => {
+  const match = document.cookie
+    .split('; ')
+    .find((row) => row.startsWith(`${name}=`));
+  return match ? decodeURIComponent(match.split('=')[1]) : null;
+};
+
 interface FacilityFunctionEntry {
   id: number;
   selected_values: string[];
-  remarks: string;
+  remarks?: string;
   function: {
     id: number;
     name: string;
@@ -23,6 +34,7 @@ interface Facility {
   address_detail?: string;
   phone_numbers: string[];
   fax?: string;
+  remarks?: string;
   functions: FacilityFunctionEntry[];
 }
 
@@ -76,11 +88,26 @@ export default function App() {
           address_detail: true,
           phone_numbers: true,
           fax: true,
+          remarks: true,
         };
         data.forEach((func: FunctionMaster) => {
           newColumns[`func_${func.id}`] = true;
         });
+        const saved = getCookie('visibleColumns');
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            Object.keys(parsed).forEach((k) => {
+              if (k in newColumns) {
+                newColumns[k] = parsed[k];
+              }
+            });
+          } catch (e) {
+            console.error('Cookie parse error', e);
+          }
+        }
         setVisibleColumns(newColumns);
+        setCookie('visibleColumns', JSON.stringify(newColumns));
       })
       .catch(err => console.error('機能マスタ取得エラー:', err));
   }, []);
@@ -94,6 +121,7 @@ export default function App() {
     { key: 'address_detail', label: '住所詳細' },
     { key: 'phone_numbers', label: '電話番号' },
     { key: 'fax', label: 'FAX' },
+    { key: 'remarks', label: '備考' },
     ...allFunctions.map((func) => ({
       key: `func_${func.id}`,
       label: func.name,
@@ -101,7 +129,11 @@ export default function App() {
   ];
 
   const toggleColumn = (key: string) => {
-    setVisibleColumns(prev => ({ ...prev, [key]: !prev[key] }));
+    setVisibleColumns((prev) => {
+      const updated = { ...prev, [key]: !prev[key] };
+      setCookie('visibleColumns', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const handleSort = (key: string) => {
@@ -189,6 +221,7 @@ export default function App() {
       facility.address_detail || '',
       facility.phone_numbers.join(', '),
       facility.fax || '',
+      facility.remarks || '',
     ];
     facility.functions.forEach((f) => {
       targets.push(f.function.name);
@@ -520,7 +553,7 @@ export default function App() {
 
               {/* 選択肢 */}
               <textarea
-                placeholder="選択肢をカンマ区切りで入力"
+                placeholder="選択肢を改行で入力"
                 value={newChoices}
                 onChange={(e) => setNewChoices(e.target.value)}
                 className="border p-2 w-full mb-4"
@@ -543,11 +576,11 @@ export default function App() {
                         // API側はIDを要求しない
                         name: newFunctionName,
                         selection_type: newSelectionType,
-                        // カンマ区切り文字列を配列に変換して送信
+                        // 改行区切り文字列を配列に変換して送信
                         choices: newChoices
-                          .split(',')
-                          .map(c => c.trim())
-                          .filter(c => c),
+                          .split('\n')
+                          .map((c) => c.trim())
+                          .filter((c) => c),
                       }),
                     })
                       .then((res) => res.json())
@@ -557,10 +590,44 @@ export default function App() {
                         setNewFunctionName('');
                         setNewSelectionType('single');
                         setNewChoices('');
-                        fetch('http://192.168.174.29:8001/functions')
-                          .then(res => res.json())
-                          .then(data => setAllFunctions(data))
-                          .catch(err => console.error('機能マスタ再取得エラー:', err));
+                        Promise.all([
+                          fetch('http://192.168.174.29:8001/functions').then((res) => res.json()),
+                          fetch('http://192.168.174.29:8001/facilities').then((res) => res.json()),
+                        ])
+                          .then(([funcData, facData]) => {
+                            setAllFunctions(funcData);
+                            setFacilities(facData);
+                            const cols: Record<string, boolean> = {
+                              id: true,
+                              short_name: true,
+                              official_name: true,
+                              prefecture: true,
+                              city: true,
+                              address_detail: true,
+                              phone_numbers: true,
+                              fax: true,
+                              remarks: true,
+                            };
+                            funcData.forEach((f: FunctionMaster) => {
+                              cols[`func_${f.id}`] = true;
+                            });
+                            const savedCols = getCookie('visibleColumns');
+                            if (savedCols) {
+                              try {
+                                const parsed = JSON.parse(savedCols);
+                                Object.keys(parsed).forEach((k) => {
+                                  if (k in cols) {
+                                    cols[k] = parsed[k];
+                                  }
+                                });
+                              } catch (e) {
+                                console.error('Cookie parse error', e);
+                              }
+                            }
+                            setVisibleColumns(cols);
+                            setCookie('visibleColumns', JSON.stringify(cols));
+                          })
+                          .catch((err) => console.error('再取得エラー:', err));
                       })
                       .catch((err) => console.error('保存エラー:', err));
                   }}
