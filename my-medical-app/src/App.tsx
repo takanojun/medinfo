@@ -54,6 +54,8 @@ interface FunctionMaster {
 export default function App() {
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [allFunctions, setAllFunctions] = useState<FunctionMaster[]>([]);
+  const [functionOrder, setFunctionOrder] = useState<number[]>([]);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   const [searchText, setSearchText] = useState('');
   const [sortKey, setSortKey] = useState<string>('id');
@@ -107,6 +109,20 @@ export default function App() {
       .then(res => res.json())
       .then(data => {
         setAllFunctions(data);
+        let order = data.map((f: FunctionMaster) => f.id);
+        const savedOrder = getCookie('functionOrder');
+        if (savedOrder) {
+          const parsed = savedOrder
+            .split(',')
+            .map((v) => parseInt(v))
+            .filter((v) => data.some((f: FunctionMaster) => f.id === v));
+          const missing = data
+            .map((f: FunctionMaster) => f.id)
+            .filter((id: number) => !parsed.includes(id));
+          order = [...parsed, ...missing];
+        }
+        setFunctionOrder(order);
+        setCookie('functionOrder', order.join(','));
         const newColumns: Record<string, boolean> = {
           id: true,
           short_name: true,
@@ -149,6 +165,20 @@ export default function App() {
       .then(([funcData, facData]) => {
         setAllFunctions(funcData);
         setFacilities(facData.map(normalizeFacility));
+        let order = funcData.map((f: FunctionMaster) => f.id);
+        const savedOrder = getCookie('functionOrder');
+        if (savedOrder) {
+          const parsed = savedOrder
+            .split(',')
+            .map((v) => parseInt(v))
+            .filter((v) => funcData.some((f: FunctionMaster) => f.id === v));
+          const missing = funcData
+            .map((f: FunctionMaster) => f.id)
+            .filter((id: number) => !parsed.includes(id));
+          order = [...parsed, ...missing];
+        }
+        setFunctionOrder(order);
+        setCookie('functionOrder', order.join(','));
         const cols: Record<string, boolean> = {
           id: visibleColumns['id'] ?? true,
           short_name: visibleColumns['short_name'] ?? true,
@@ -181,10 +211,13 @@ export default function App() {
     { key: 'emails', label: 'メール' },
     { key: 'fax', label: 'FAX' },
     { key: 'remarks', label: '備考' },
-    ...allFunctions.map((func) => ({
-      key: `func_${func.id}`,
-      label: func.name,
-    })),
+    ...functionOrder
+      .map((id: number) => allFunctions.find((f) => f.id === id))
+      .filter((f): f is FunctionMaster => !!f)
+      .map((func) => ({
+        key: `func_${func.id}`,
+        label: func.name,
+      })),
   ];
 
   const toggleColumn = (key: string) => {
@@ -394,7 +427,7 @@ export default function App() {
             if (!entry) return '';
             return entry.selected_values.join('|');
           }
-          const val = (fac as Record<string, unknown>)[col.key];
+          const val = (fac as unknown as Record<string, unknown>)[col.key];
           if (Array.isArray(val)) {
             return (val as ContactInfo[])
               .map((v) => formatVal(v.value))
@@ -444,8 +477,8 @@ export default function App() {
     if (sortOrder === 'none') {
       return a.id - b.id;
     }
-    let aVal: string | number = '';
-    let bVal: string | number = '';
+      let aVal: string | number | ContactInfo[] = '';
+      let bVal: string | number | ContactInfo[] = '';
     if (sortKey.startsWith('func_')) {
       const funcId = parseInt(sortKey.replace('func_', ''));
       const aFunc = a.functions.find((f) => f.function.id === funcId);
@@ -453,8 +486,8 @@ export default function App() {
       aVal = aFunc ? aFunc.selected_values.join(', ') : '';
       bVal = bFunc ? bFunc.selected_values.join(', ') : '';
     } else {
-      const aRecord = a as Record<string, unknown>;
-      const bRecord = b as Record<string, unknown>;
+      const aRecord = a as unknown as Record<string, unknown>;
+      const bRecord = b as unknown as Record<string, unknown>;
       aVal = aRecord[sortKey] as string | number | ContactInfo[] | undefined || '';
       bVal = bRecord[sortKey] as string | number | ContactInfo[] | undefined || '';
       if (Array.isArray(aVal)) {
@@ -585,23 +618,25 @@ export default function App() {
                         </td>
                       );
                     } else {
-                      const val = (facility as Record<string, unknown>)[col.key];
+                      const val = (facility as unknown as Record<string, unknown>)[col.key];
                       return (
                         <td
                           key={col.key}
                           className="py-2 px-4 border whitespace-nowrap"
                           onContextMenu={(e) => handleFacilityCellRightClick(e, facility)}
                         >
-                          {Array.isArray(val)
-                            ? val
-                                .map((v: ContactInfo) =>
-                                  v.value ? `${v.value}${v.comment ? `（${v.comment}）` : ''}` : ''
-                                )
-                                .filter((v) => v)
-                                .join(', ')
-                            : val || '-'}
+                          {(
+                            Array.isArray(val)
+                              ? val
+                                  .map((v: ContactInfo) =>
+                                    v.value ? `${v.value}${v.comment ? `（${v.comment}）` : ''}` : ''
+                                  )
+                                  .filter((v) => v)
+                                  .join(', ')
+                              : val || '-'
+                          ) as React.ReactNode}
                         </td>
-                      );
+                      ) as React.ReactNode;
                     }
                   })}
               </tr>
@@ -620,8 +655,26 @@ export default function App() {
           </tr>
         </thead>
         <tbody>
-          {allFunctions.map((func) => (
-            <tr key={func.id} className="hover:bg-gray-50">
+          {functionOrder
+            .map((id: number) => allFunctions.find((f) => f.id === id))
+            .filter((f): f is FunctionMaster => !!f)
+            .map((func, idx) => (
+            <tr
+              key={func.id}
+              className="hover:bg-gray-50"
+              draggable
+              onDragStart={() => setDragIndex(idx)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => {
+                if (dragIndex === null) return;
+                const newOrder = [...functionOrder];
+                const [moved] = newOrder.splice(dragIndex, 1);
+                newOrder.splice(idx, 0, moved);
+                setFunctionOrder(newOrder);
+                setCookie('functionOrder', newOrder.join(','));
+                setDragIndex(null);
+              }}
+            >
               <td className="border px-2">{func.id}</td>
               <td className="border px-2">{func.name}</td>
               <td className="border px-2">
