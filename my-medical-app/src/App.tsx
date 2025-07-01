@@ -61,6 +61,7 @@ export default function App() {
   const [newFunctionName, setNewFunctionName] = useState('');
   const [newSelectionType, setNewSelectionType] = useState<'single' | 'multiple'>('single');
   const [newChoices, setNewChoices] = useState<string>('');
+  const [editingFunctionMaster, setEditingFunctionMaster] = useState<FunctionMaster | null>(null);
   const [modalSearchText, setModalSearchText] = useState('');
 
   // 医療機関編集モーダル用
@@ -71,6 +72,7 @@ export default function App() {
   const [editingEntry, setEditingEntry] = useState<FacilityFunctionEntry | null>(null);
   const [editingFacilityId, setEditingFacilityId] = useState<number | null>(null);
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const normalizeFacility = (f: any): Facility => ({
     ...f,
     official_name: f.official_name || '',
@@ -88,6 +90,7 @@ export default function App() {
       .then((data) => setFacilities(data.map(normalizeFacility)))
       .catch((err) => console.error('施設情報取得エラー:', err));
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchFacilities();
   }, []);
@@ -129,6 +132,34 @@ export default function App() {
       })
       .catch(err => console.error('機能マスタ取得エラー:', err));
   }, []);
+
+  const refreshData = () => {
+    Promise.all([
+      fetch('http://192.168.174.29:8001/functions').then((res) => res.json()),
+      fetch('http://192.168.174.29:8001/facilities').then((res) => res.json()),
+    ])
+      .then(([funcData, facData]) => {
+        setAllFunctions(funcData);
+        setFacilities(facData.map(normalizeFacility));
+        const cols: Record<string, boolean> = {
+          id: true,
+          short_name: true,
+          official_name: true,
+          prefecture: true,
+          city: true,
+          address_detail: true,
+          phone_numbers: true,
+          fax: true,
+          remarks: true,
+        };
+        funcData.forEach((f: FunctionMaster) => {
+          cols[`func_${f.id}`] = visibleColumns[`func_${f.id}`] ?? true;
+        });
+        setVisibleColumns(cols);
+        setCookie('visibleColumns', JSON.stringify(cols));
+      })
+      .catch((err) => console.error('再取得エラー:', err));
+  };
 
   const columns = [
     { key: 'id', label: 'ID' },
@@ -276,6 +307,62 @@ export default function App() {
       .catch((err) => console.error('保存エラー:', err));
   };
 
+  const openNewFunctionMasterModal = () => {
+    setEditingFunctionMaster(null);
+    setNewFunctionName('');
+    setNewSelectionType('single');
+    setNewChoices('');
+    setIsFunctionMasterModalOpen(true);
+  };
+
+  const openEditFunctionMasterModal = (func: FunctionMaster) => {
+    setEditingFunctionMaster(func);
+    setNewFunctionName(func.name);
+    setNewSelectionType(func.selection_type || 'single');
+    setNewChoices((func.choices || []).join('\n'));
+    setIsFunctionMasterModalOpen(true);
+  };
+
+  const handleSaveFunctionMaster = () => {
+    const payload = {
+      name: newFunctionName,
+      selection_type: newSelectionType,
+      choices: newChoices
+        .split('\n')
+        .map((c) => c.trim())
+        .filter((c) => c),
+    };
+    const url = editingFunctionMaster
+      ? `http://192.168.174.29:8001/functions/${editingFunctionMaster.id}`
+      : 'http://192.168.174.29:8001/functions';
+    const method = editingFunctionMaster ? 'PUT' : 'POST';
+    fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then((res) => res.json())
+      .then(() => {
+        setIsFunctionMasterModalOpen(false);
+        setEditingFunctionMaster(null);
+        setNewFunctionName('');
+        setNewSelectionType('single');
+        setNewChoices('');
+        refreshData();
+      })
+      .catch((err) => console.error('保存エラー:', err));
+  };
+
+  const handleDeleteFunctionMaster = (id: number) => {
+    if (!window.confirm('削除してよろしいですか？')) return;
+    fetch(`http://192.168.174.29:8001/functions/${id}`, { method: 'DELETE' })
+      .then((res) => res.json())
+      .then(() => {
+        refreshData();
+      })
+      .catch((err) => console.error('削除エラー:', err));
+  };
+
   // 検索フィルタ
   const filteredFacilities = facilities.filter((facility) => {
     const targets: string[] = [
@@ -368,10 +455,10 @@ export default function App() {
         </button>
         <button
           className="px-4 py-2 bg-green-500 text-white rounded"
-          onClick={() => setIsFunctionMasterModalOpen(true)}
+          onClick={openNewFunctionMasterModal}
         >
-    新規機能マスタ追加
-  </button>
+          新規機能マスタ追加
+        </button>
       </div>
 
       {/* テーブル */}
@@ -437,6 +524,39 @@ export default function App() {
           </tbody>
         </table>
       </div>
+
+      <h2 className="text-xl font-bold mt-8 mb-2">機能マスタ一覧</h2>
+      <table className="min-w-max border-collapse border border-gray-300 mb-4">
+        <thead>
+          <tr className="bg-gray-200">
+            <th className="px-2 py-1 border">ID</th>
+            <th className="px-2 py-1 border">名称</th>
+            <th className="px-2 py-1 border">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {allFunctions.map((func) => (
+            <tr key={func.id} className="hover:bg-gray-50">
+              <td className="border px-2">{func.id}</td>
+              <td className="border px-2">{func.name}</td>
+              <td className="border px-2">
+                <button
+                  className="px-2 py-1 bg-blue-500 text-white rounded mr-2"
+                  onClick={() => openEditFunctionMasterModal(func)}
+                >
+                  編集
+                </button>
+                <button
+                  className="px-2 py-1 bg-red-500 text-white rounded"
+                  onClick={() => handleDeleteFunctionMaster(func.id)}
+                >
+                  削除
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
       {/* モーダル */}
       <Transition appear show={isColumnModalOpen} as={Fragment}>
@@ -706,13 +826,15 @@ export default function App() {
         </Dialog>
       </Transition>
       
-      {/* 新規機能マスタ追加モーダル */}
+      {/* 機能マスタ追加/編集モーダル */}
       <Transition appear show={isFunctionMasterModalOpen} as={Fragment}>
         <Dialog as="div" className="relative z-10" onClose={() => setIsFunctionMasterModalOpen(false)}>
           <div className="fixed inset-0 bg-black bg-opacity-25" />
           <div className="fixed inset-0 overflow-y-auto flex items-center justify-center p-4">
             <Dialog.Panel className="w-full max-w-md bg-white rounded p-6 shadow">
-              <h3 className="text-lg font-bold mb-4">新規機能マスタ追加</h3>
+              <h3 className="text-lg font-bold mb-4">
+                {editingFunctionMaster ? '機能マスタ編集' : '新規機能マスタ追加'}
+              </h3>
 
               {/* 機能名 */}
               <input
@@ -760,70 +882,7 @@ export default function App() {
                   キャンセル
                 </button>
                 <button
-                  onClick={() => {
-                    // 機能マスタ登録APIへPOST
-                    fetch('http://192.168.174.29:8001/functions', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        // API側はIDを要求しない
-                        name: newFunctionName,
-                        selection_type: newSelectionType,
-                        // 改行区切り文字列を配列に変換して送信
-                        choices: newChoices
-                          .split('\n')
-                          .map((c) => c.trim())
-                          .filter((c) => c),
-                      }),
-                    })
-                      .then((res) => res.json())
-                      .then(() => {
-                        // 保存成功後：モーダル閉じる＆機能マスタ再取得
-                        setIsFunctionMasterModalOpen(false);
-                        setNewFunctionName('');
-                        setNewSelectionType('single');
-                        setNewChoices('');
-                        Promise.all([
-                          fetch('http://192.168.174.29:8001/functions').then((res) => res.json()),
-                          fetch('http://192.168.174.29:8001/facilities').then((res) => res.json()),
-                        ])
-                          .then(([funcData, facData]) => {
-                            setAllFunctions(funcData);
-                            setFacilities(facData.map(normalizeFacility));
-                            const cols: Record<string, boolean> = {
-                              id: true,
-                              short_name: true,
-                              official_name: true,
-                              prefecture: true,
-                              city: true,
-                              address_detail: true,
-                              phone_numbers: true,
-                              fax: true,
-                              remarks: true,
-                            };
-                            funcData.forEach((f: FunctionMaster) => {
-                              cols[`func_${f.id}`] = true;
-                            });
-                            const savedCols = getCookie('visibleColumns');
-                            if (savedCols) {
-                              try {
-                                const parsed = JSON.parse(savedCols);
-                                Object.keys(parsed).forEach((k) => {
-                                  if (k in cols) {
-                                    cols[k] = parsed[k];
-                                  }
-                                });
-                              } catch (e) {
-                                console.error('Cookie parse error', e);
-                              }
-                            }
-                            setVisibleColumns(cols);
-                            setCookie('visibleColumns', JSON.stringify(cols));
-                          })
-                          .catch((err) => console.error('再取得エラー:', err));
-                      })
-                      .catch((err) => console.error('保存エラー:', err));
-                  }}
+                  onClick={handleSaveFunctionMaster}
                   className="px-4 py-2 bg-blue-500 text-white rounded"
                 >
                   保存

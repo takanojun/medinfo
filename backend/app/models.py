@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, ARRAY, CheckConstraint
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, ARRAY, CheckConstraint, Boolean
 from sqlalchemy.orm import relationship
 from .database import Base
 
@@ -28,6 +28,7 @@ class Function(Base):
     description = Column(Text)
     selection_type = Column(Text, CheckConstraint("selection_type IN ('single', 'multiple')"))
     choices = Column(ARRAY(Text))
+    is_deleted = Column(Boolean, default=False)
 
     # 機能エントリ（中間テーブル）側からの逆参照
     entries = relationship("FacilityFunctionEntry", back_populates="function", cascade="all, delete-orphan")
