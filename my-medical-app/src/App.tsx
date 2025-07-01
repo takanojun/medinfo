@@ -25,6 +25,11 @@ interface FacilityFunctionEntry {
   };
 }
 
+interface ContactInfo {
+  value: string;
+  comment: string;
+}
+
 interface Facility {
   id: number;
   short_name: string;
@@ -32,7 +37,8 @@ interface Facility {
   prefecture?: string;
   city?: string;
   address_detail?: string;
-  phone_numbers: string[];
+  phone_numbers: ContactInfo[];
+  emails: ContactInfo[];
   fax?: string;
   remarks?: string;
   functions: FacilityFunctionEntry[];
@@ -51,7 +57,7 @@ export default function App() {
 
   const [searchText, setSearchText] = useState('');
   const [sortKey, setSortKey] = useState<string>('id');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'none'>('none');
 
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({});
   //const [isModalOpen, setIsModalOpen] = useState(false);
@@ -80,6 +86,7 @@ export default function App() {
     city: f.city || '',
     address_detail: f.address_detail || '',
     phone_numbers: Array.isArray(f.phone_numbers) ? f.phone_numbers : [],
+    emails: Array.isArray(f.emails) ? f.emails : [],
     fax: f.fax || '',
     remarks: f.remarks || '',
   });
@@ -108,6 +115,7 @@ export default function App() {
           city: true,
           address_detail: true,
           phone_numbers: true,
+          emails: true,
           fax: true,
           remarks: true,
         };
@@ -149,6 +157,7 @@ export default function App() {
           city: visibleColumns['city'] ?? true,
           address_detail: visibleColumns['address_detail'] ?? true,
           phone_numbers: visibleColumns['phone_numbers'] ?? true,
+          emails: visibleColumns['emails'] ?? true,
           fax: visibleColumns['fax'] ?? true,
           remarks: visibleColumns['remarks'] ?? true,
         };
@@ -169,6 +178,7 @@ export default function App() {
     { key: 'city', label: '市町村' },
     { key: 'address_detail', label: '住所詳細' },
     { key: 'phone_numbers', label: '電話番号' },
+    { key: 'emails', label: 'メール' },
     { key: 'fax', label: 'FAX' },
     { key: 'remarks', label: '備考' },
     ...allFunctions.map((func) => ({
@@ -187,7 +197,13 @@ export default function App() {
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+      if (sortOrder === 'asc') {
+        setSortOrder('desc');
+      } else if (sortOrder === 'desc') {
+        setSortOrder('none');
+      } else {
+        setSortOrder('asc');
+      }
     } else {
       setSortKey(key);
       setSortOrder('asc');
@@ -242,6 +258,7 @@ export default function App() {
       city: editingFacility.city,
       address_detail: editingFacility.address_detail,
       phone_numbers: editingFacility.phone_numbers,
+      emails: editingFacility.emails,
       fax: editingFacility.fax,
       remarks: editingFacility.remarks,
     };
@@ -363,6 +380,41 @@ export default function App() {
       .catch((err) => console.error('削除エラー:', err));
   };
 
+  const handleExportCsv = () => {
+    const visibleCols = columns.filter((c) => visibleColumns[c.key]);
+    const header = visibleCols.map((c) => c.label).join(',');
+    const formatVal = (v: string) => `="${v.replace(/"/g, '""')}"`;
+
+    const rows = sortedFacilities.map((fac) => {
+      return visibleCols
+        .map((col) => {
+          if (col.key.startsWith('func_')) {
+            const id = parseInt(col.key.replace('func_', ''));
+            const entry = fac.functions.find((f) => f.function.id === id);
+            if (!entry) return '';
+            return entry.selected_values.join('|');
+          }
+          const val = (fac as Record<string, unknown>)[col.key];
+          if (Array.isArray(val)) {
+            return (val as ContactInfo[])
+              .map((v) => formatVal(v.value))
+              .join('|');
+          }
+          if (typeof val === 'string') {
+            return formatVal(val);
+          }
+          return String(val ?? '');
+        })
+        .join(',');
+    });
+    const csv = [header, ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'facilities.csv';
+    link.click();
+  };
+
   // 検索フィルタ
   const filteredFacilities = facilities.filter((facility) => {
     const targets: string[] = [
@@ -372,7 +424,8 @@ export default function App() {
       facility.prefecture || '',
       facility.city || '',
       facility.address_detail || '',
-      facility.phone_numbers.join(', '),
+      facility.phone_numbers.map(p => p.value).join(', '),
+      facility.emails.map(e => e.value).join(', '),
       facility.fax || '',
       facility.remarks || '',
     ];
@@ -388,6 +441,9 @@ export default function App() {
 
   // ソート
   const sortedFacilities = [...filteredFacilities].sort((a, b) => {
+    if (sortOrder === 'none') {
+      return a.id - b.id;
+    }
     let aVal: string | number = '';
     let bVal: string | number = '';
     if (sortKey.startsWith('func_')) {
@@ -397,12 +453,26 @@ export default function App() {
       aVal = aFunc ? aFunc.selected_values.join(', ') : '';
       bVal = bFunc ? bFunc.selected_values.join(', ') : '';
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      aVal = (a as any)[sortKey] || '';
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      bVal = (b as any)[sortKey] || '';
-      if (Array.isArray(aVal)) aVal = aVal.join(', ');
-      if (Array.isArray(bVal)) bVal = bVal.join(', ');
+      const aRecord = a as Record<string, unknown>;
+      const bRecord = b as Record<string, unknown>;
+      aVal = aRecord[sortKey] as string | number | ContactInfo[] | undefined || '';
+      bVal = bRecord[sortKey] as string | number | ContactInfo[] | undefined || '';
+      if (Array.isArray(aVal)) {
+        aVal = (aVal as ContactInfo[])
+          .map((v) =>
+            v.value ? `${v.value}${v.comment ? `（${v.comment}）` : ''}` : ''
+          )
+          .filter((v) => v)
+          .join(', ');
+      }
+      if (Array.isArray(bVal)) {
+        bVal = (bVal as ContactInfo[])
+          .map((v) =>
+            v.value ? `${v.value}${v.comment ? `（${v.comment}）` : ''}` : ''
+          )
+          .filter((v) => v)
+          .join(', ');
+      }
     }
     if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
     if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
@@ -444,6 +514,7 @@ export default function App() {
               city: '',
               address_detail: '',
               phone_numbers: [],
+              emails: [],
               fax: '',
               remarks: '',
               functions: [],
@@ -452,6 +523,12 @@ export default function App() {
           }}
         >
           新規医療機関追加
+        </button>
+        <button
+          className="px-4 py-2 bg-green-500 text-white rounded"
+          onClick={handleExportCsv}
+        >
+          CSV出力
         </button>
         <button
           className="px-4 py-2 bg-green-500 text-white rounded"
@@ -474,7 +551,9 @@ export default function App() {
                     className="py-2 px-4 border cursor-pointer whitespace-nowrap"
                     onClick={() => handleSort(col.key)}
                   >
-                    {col.label} {sortKey === col.key && (sortOrder === 'asc' ? '▲' : '▼')}
+                    {col.label}{' '}
+                    {sortKey === col.key && sortOrder !== 'none' &&
+                      (sortOrder === 'asc' ? '▲' : '▼')}
                   </th>
                 ))}
             </tr>
@@ -506,15 +585,21 @@ export default function App() {
                         </td>
                       );
                     } else {
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      const val = (facility as any)[col.key];
+                      const val = (facility as Record<string, unknown>)[col.key];
                       return (
                         <td
                           key={col.key}
                           className="py-2 px-4 border whitespace-nowrap"
                           onContextMenu={(e) => handleFacilityCellRightClick(e, facility)}
                         >
-                          {Array.isArray(val) ? val.join(', ') : val || '-'}
+                          {Array.isArray(val)
+                            ? val
+                                .map((v: ContactInfo) =>
+                                  v.value ? `${v.value}${v.comment ? `（${v.comment}）` : ''}` : ''
+                                )
+                                .filter((v) => v)
+                                .join(', ')
+                            : val || '-'}
                         </td>
                       );
                     }
@@ -689,21 +774,97 @@ export default function App() {
                     }
                     className="border p-2 w-full"
                   />
-                  <input
-                    type="text"
-                    placeholder="電話番号(カンマ区切り)"
-                    value={editingFacility.phone_numbers.join(', ')}
-                    onChange={(e) =>
-                      setEditingFacility({
-                        ...editingFacility,
-                        phone_numbers: e.target.value
-                          .split(',')
-                          .map((v) => v.trim())
-                          .filter((v) => v),
-                      })
-                    }
-                    className="border p-2 w-full"
-                  />
+                  <div className="space-y-2">
+                    {editingFacility.phone_numbers.map((p, idx) => (
+                      <div className="flex gap-2" key={idx}>
+                        <input
+                          type="text"
+                          placeholder="電話番号"
+                          value={p.value}
+                          onChange={(e) => {
+                            const list = [...editingFacility.phone_numbers];
+                            list[idx] = { ...list[idx], value: e.target.value };
+                            setEditingFacility({ ...editingFacility, phone_numbers: list });
+                          }}
+                          className="border p-2 w-full"
+                        />
+                        <input
+                          type="text"
+                          placeholder="コメント"
+                          value={p.comment}
+                          onChange={(e) => {
+                            const list = [...editingFacility.phone_numbers];
+                            list[idx] = { ...list[idx], comment: e.target.value };
+                            setEditingFacility({ ...editingFacility, phone_numbers: list });
+                          }}
+                          className="border p-2 w-full"
+                        />
+                        <button
+                          onClick={() => {
+                            const list = [...editingFacility.phone_numbers];
+                            list.splice(idx, 1);
+                            setEditingFacility({ ...editingFacility, phone_numbers: list });
+                          }}
+                          className="px-2 bg-red-500 text-white rounded"
+                        >削除</button>
+                      </div>
+                    ))}
+                    <button
+                      onClick={() =>
+                        setEditingFacility({
+                          ...editingFacility,
+                          phone_numbers: [...editingFacility.phone_numbers, { value: '', comment: '' }],
+                        })
+                      }
+                      className="px-2 py-1 bg-blue-500 text-white rounded"
+                    >追加</button>
+                  </div>
+
+                  <div className="space-y-2 mt-2">
+                    {editingFacility.emails.map((m, idx) => (
+                      <div className="flex gap-2" key={idx}>
+                        <input
+                          type="text"
+                          placeholder="メールアドレス"
+                          value={m.value}
+                          onChange={(e) => {
+                            const list = [...editingFacility.emails];
+                            list[idx] = { ...list[idx], value: e.target.value };
+                            setEditingFacility({ ...editingFacility, emails: list });
+                          }}
+                          className="border p-2 w-full"
+                        />
+                        <input
+                          type="text"
+                          placeholder="コメント"
+                          value={m.comment}
+                          onChange={(e) => {
+                            const list = [...editingFacility.emails];
+                            list[idx] = { ...list[idx], comment: e.target.value };
+                            setEditingFacility({ ...editingFacility, emails: list });
+                          }}
+                          className="border p-2 w-full"
+                        />
+                        <button
+                          onClick={() => {
+                            const list = [...editingFacility.emails];
+                            list.splice(idx, 1);
+                            setEditingFacility({ ...editingFacility, emails: list });
+                          }}
+                          className="px-2 bg-red-500 text-white rounded"
+                        >削除</button>
+                      </div>
+                    ))}
+                    <button
+                      onClick={() =>
+                        setEditingFacility({
+                          ...editingFacility,
+                          emails: [...editingFacility.emails, { value: '', comment: '' }],
+                        })
+                      }
+                      className="px-2 py-1 bg-blue-500 text-white rounded"
+                    >メール追加</button>
+                  </div>
                   <input
                     type="text"
                     placeholder="FAX"
@@ -747,9 +908,12 @@ export default function App() {
           <div className="fixed inset-0 bg-black bg-opacity-25" />
           <div className="fixed inset-0 overflow-y-auto flex items-center justify-center p-4">
             <Dialog.Panel className="w-full max-w-md bg-white rounded p-6 shadow">
-              <h3 className="text-lg font-bold mb-4">
+              <h3 className="text-lg font-bold mb-2">
                 機能編集: {editingEntry?.function.name}
               </h3>
+              <p className="mb-4">
+                医療機関: {facilities.find(f => f.id === editingFacilityId)?.short_name}
+              </p>
               {editingEntry && (
                 <div>
                   {editingEntry.function.selection_type === 'single' ? (
@@ -871,6 +1035,7 @@ export default function App() {
                 placeholder="選択肢を改行で入力"
                 value={newChoices}
                 onChange={(e) => setNewChoices(e.target.value)}
+                rows={5}
                 className="border p-2 w-full mb-4"
               />
 
