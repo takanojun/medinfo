@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, ARRAY, CheckConstraint, Boolean
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, ARRAY, CheckConstraint, Boolean, JSON
 from sqlalchemy.orm import relationship
 from .database import Base
 
@@ -12,7 +12,8 @@ class MedicalFacility(Base):
     prefecture = Column(Text)
     city = Column(Text)
     address_detail = Column(Text)
-    phone_numbers = Column(ARRAY(Text))
+    phone_numbers = Column(JSON)
+    emails = Column(JSON)
     fax = Column(Text)
     remarks = Column(Text)
 

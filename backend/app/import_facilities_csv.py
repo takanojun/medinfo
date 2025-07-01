@@ -18,7 +18,14 @@ def import_from_csv(csv_path: str) -> None:
                     prefecture=row.get("prefecture"),
                     city=row.get("city"),
                     address_detail=row.get("address_detail"),
-                    phone_numbers=row.get("phone_numbers").split("|") if row.get("phone_numbers") else None,
+                    phone_numbers=[
+                        {"value": p.split(":")[0], "comment": p.split(":")[1] if ":" in p else ""}
+                        for p in row.get("phone_numbers", "").split("|") if p
+                    ] or None,
+                    emails=[
+                        {"value": e.split(":")[0], "comment": e.split(":")[1] if ":" in e else ""}
+                        for e in row.get("emails", "").split("|") if e
+                    ] or None,
                     fax=row.get("fax"),
                     remarks=row.get("remarks"),
                 )

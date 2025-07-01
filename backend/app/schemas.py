@@ -1,6 +1,11 @@
 from pydantic import BaseModel
 from typing import Optional, List
 
+
+class ContactInfo(BaseModel):
+    value: str
+    comment: Optional[str] = None
+
 class FunctionBase(BaseModel):
     """機能マスタの基本スキーマ (読み取り用)"""
 
@@ -38,7 +43,8 @@ class MedicalFacilityBase(BaseModel):
     prefecture: Optional[str]
     city: Optional[str]
     address_detail: Optional[str]
-    phone_numbers: Optional[List[str]]
+    phone_numbers: Optional[List[ContactInfo]]
+    emails: Optional[List[ContactInfo]]
     fax: Optional[str]
     remarks: Optional[str]
 
@@ -55,7 +61,8 @@ class MedicalFacilityUpdate(BaseModel):
     prefecture: Optional[str] = None
     city: Optional[str] = None
     address_detail: Optional[str] = None
-    phone_numbers: Optional[List[str]] = None
+    phone_numbers: Optional[List[ContactInfo]] = None
+    emails: Optional[List[ContactInfo]] = None
     fax: Optional[str] = None
     remarks: Optional[str] = None
 
