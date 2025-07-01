@@ -42,3 +42,7 @@ python backend/app/reset_db.py
 ```bash
 python backend/app/import_facilities_csv.py path/to/facilities.csv
 ```
+
+サンプルとして `backend/facilities_sample.csv` を用意しています。
+=======
+
