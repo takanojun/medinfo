@@ -142,15 +142,15 @@ export default function App() {
         setAllFunctions(funcData);
         setFacilities(facData.map(normalizeFacility));
         const cols: Record<string, boolean> = {
-          id: true,
-          short_name: true,
-          official_name: true,
-          prefecture: true,
-          city: true,
-          address_detail: true,
-          phone_numbers: true,
-          fax: true,
-          remarks: true,
+          id: visibleColumns['id'] ?? true,
+          short_name: visibleColumns['short_name'] ?? true,
+          official_name: visibleColumns['official_name'] ?? true,
+          prefecture: visibleColumns['prefecture'] ?? true,
+          city: visibleColumns['city'] ?? true,
+          address_detail: visibleColumns['address_detail'] ?? true,
+          phone_numbers: visibleColumns['phone_numbers'] ?? true,
+          fax: visibleColumns['fax'] ?? true,
+          remarks: visibleColumns['remarks'] ?? true,
         };
         funcData.forEach((f: FunctionMaster) => {
           cols[`func_${f.id}`] = visibleColumns[`func_${f.id}`] ?? true;
