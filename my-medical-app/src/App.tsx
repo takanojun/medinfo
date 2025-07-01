@@ -71,11 +71,25 @@ export default function App() {
   const [editingEntry, setEditingEntry] = useState<FacilityFunctionEntry | null>(null);
   const [editingFacilityId, setEditingFacilityId] = useState<number | null>(null);
   
-  useEffect(() => {
+  const normalizeFacility = (f: any): Facility => ({
+    ...f,
+    official_name: f.official_name || '',
+    prefecture: f.prefecture || '',
+    city: f.city || '',
+    address_detail: f.address_detail || '',
+    phone_numbers: Array.isArray(f.phone_numbers) ? f.phone_numbers : [],
+    fax: f.fax || '',
+    remarks: f.remarks || '',
+  });
+
+  const fetchFacilities = () =>
     fetch('http://192.168.174.29:8001/facilities')
-      .then(res => res.json())
-      .then(data => setFacilities(data))
-      .catch(err => console.error('施設情報取得エラー:', err));
+      .then((res) => res.json())
+      .then((data) => setFacilities(data.map(normalizeFacility)))
+      .catch((err) => console.error('施設情報取得エラー:', err));
+
+  useEffect(() => {
+    fetchFacilities();
   }, []);
 
   useEffect(() => {
@@ -183,7 +197,7 @@ export default function App() {
     facility: Facility
   ) => {
     e.preventDefault();
-    setEditingFacility({ ...facility });
+    setEditingFacility(normalizeFacility(facility));
     setIsFacilityModalOpen(true);
   };
 
@@ -219,9 +233,7 @@ export default function App() {
       .then(() => {
         setIsFacilityModalOpen(false);
         setEditingFacility(null);
-        fetch('http://192.168.174.29:8001/facilities')
-          .then((res) => res.json())
-          .then((data) => setFacilities(data));
+        fetchFacilities();
       })
       .catch((err) => console.error('保存エラー:', err));
   };
@@ -259,9 +271,7 @@ export default function App() {
       .then((res) => res.json())
       .then(() => {
         setIsFunctionModalOpen(false);
-        fetch('http://192.168.174.29:8001/facilities')
-          .then((res) => res.json())
-          .then((data) => setFacilities(data));
+        fetchFacilities();
       })
       .catch((err) => console.error('保存エラー:', err));
   };
@@ -779,7 +789,7 @@ export default function App() {
                         ])
                           .then(([funcData, facData]) => {
                             setAllFunctions(funcData);
-                            setFacilities(facData);
+                            setFacilities(facData.map(normalizeFacility));
                             const cols: Record<string, boolean> = {
                               id: true,
                               short_name: true,
