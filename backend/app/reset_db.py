@@ -1,4 +1,5 @@
 from .database import Base, engine
+from . import models  # ensure models are registered with Base
 
 
 def reset_db():

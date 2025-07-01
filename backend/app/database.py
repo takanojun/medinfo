@@ -1,9 +1,10 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 # DB接続情報（ユーザー: orca / パスワード: orca）
-DATABASE_URL = "postgresql://orca:orca@localhost/medinfo_db"
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://orca:orca@localhost/medinfo_db")
 
 # SQLAlchemyエンジン生成
 engine = create_engine(DATABASE_URL)
