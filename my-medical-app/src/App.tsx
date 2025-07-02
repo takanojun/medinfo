@@ -545,7 +545,7 @@ export default function App() {
 
   return (
     <div className="bg-gray-100 h-screen p-0 overflow-hidden flex flex-col">
-      <div className="flex items-center mb-2 p-4 bg-gray-100 flex-none sticky top-0 z-10">
+      <div className="flex items-center mb-2 p-2 bg-gray-100 flex-none sticky top-0 z-30">
         <h1 className="text-2xl font-bold">医療機関一覧</h1>
         <div className="relative ml-4">
           <button
@@ -610,7 +610,7 @@ export default function App() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden p-4 flex flex-col">
+      <div className="flex-1 overflow-hidden px-4 pt-2 pb-4 flex flex-col">
       {/* 検索 */}
       <div className="mb-2 flex items-center gap-2">
         <input
