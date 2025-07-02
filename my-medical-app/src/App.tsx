@@ -554,7 +554,7 @@ export default function App() {
             &#9776;
           </button>
           {isMenuOpen && (
-            <div className="absolute mt-2 bg-white border rounded shadow flex flex-row space-x-2">
+            <div className="absolute mt-2 bg-white border rounded shadow flex flex-col space-y-2">
               <button
                 onClick={() => {
                   setIsColumnModalOpen(true);
