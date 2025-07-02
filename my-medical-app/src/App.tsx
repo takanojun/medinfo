@@ -69,6 +69,7 @@ export default function App() {
   const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
   const [isFunctionModalOpen, setIsFunctionModalOpen] = useState(false);
   const [isFunctionMasterModalOpen, setIsFunctionMasterModalOpen] = useState(false);
+  const [isFunctionMasterListOpen, setIsFunctionMasterListOpen] = useState(false);
   const [newFunctionName, setNewFunctionName] = useState('');
   const [newSelectionType, setNewSelectionType] = useState<'single' | 'multiple'>('single');
   const [newChoices, setNewChoices] = useState<string>('');
@@ -544,7 +545,7 @@ export default function App() {
 
   return (
     <div className="bg-gray-100 h-screen p-0 overflow-hidden flex flex-col">
-      <div className="flex items-center mb-4 p-4 bg-gray-100 flex-none sticky top-0 z-10">
+      <div className="flex items-center mb-2 p-4 bg-gray-100 flex-none sticky top-0 z-10">
         <h1 className="text-2xl font-bold">医療機関一覧</h1>
         <div className="relative ml-4">
           <button
@@ -554,7 +555,7 @@ export default function App() {
             &#9776;
           </button>
           {isMenuOpen && (
-            <div className="absolute mt-2 bg-white border rounded shadow flex flex-col space-y-2 w-max">
+            <div className="absolute mt-2 bg-white border rounded shadow flex flex-col space-y-2 w-max z-20">
               <button
                 onClick={() => {
                   setIsColumnModalOpen(true);
@@ -589,11 +590,11 @@ export default function App() {
               <button
                 className="px-4 py-2 hover:bg-gray-100 text-left"
                 onClick={() => {
-                  openNewFunctionMasterModal();
+                  setIsFunctionMasterListOpen(true);
                   setIsMenuOpen(false);
                 }}
               >
-                新規機能マスタ追加
+                機能マスタ保守
               </button>
               <button
                 className="px-4 py-2 hover:bg-gray-100 text-left"
@@ -611,7 +612,7 @@ export default function App() {
 
       <div className="flex-1 overflow-hidden p-4 flex flex-col">
       {/* 検索 */}
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-2 flex items-center gap-2">
         <input
           type="text"
           placeholder="キーワードで検索"
@@ -726,58 +727,6 @@ export default function App() {
         </table>
       </div>
 
-      <div className="mt-8 overflow-y-auto max-h-60">
-      <h2 className="text-xl font-bold mb-2">機能マスタ一覧</h2>
-      <table className="min-w-max border-collapse border border-gray-300 mb-4">
-        <thead>
-          <tr className="bg-gray-200">
-            <th className="px-2 py-1 border">ID</th>
-            <th className="px-2 py-1 border">名称</th>
-            <th className="px-2 py-1 border">操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          {functionOrder
-            .map((id: number) => allFunctions.find((f) => f.id === id))
-            .filter((f): f is FunctionMaster => !!f)
-            .map((func, idx) => (
-            <tr
-              key={func.id}
-              className="hover:bg-gray-50"
-              draggable
-              onDragStart={() => setDragIndex(idx)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => {
-                if (dragIndex === null) return;
-                const newOrder = [...functionOrder];
-                const [moved] = newOrder.splice(dragIndex, 1);
-                newOrder.splice(idx, 0, moved);
-                setFunctionOrder(newOrder);
-                setCookie('functionOrder', newOrder.join(','));
-                setDragIndex(null);
-              }}
-            >
-              <td className="border px-2">{func.id}</td>
-              <td className="border px-2">{func.name}</td>
-              <td className="border px-2">
-                <button
-                  className="px-2 py-1 bg-blue-500 text-white rounded mr-2"
-                  onClick={() => openEditFunctionMasterModal(func)}
-                >
-                  編集
-                </button>
-                <button
-                  className="px-2 py-1 bg-red-500 text-white rounded"
-                  onClick={() => handleDeleteFunctionMaster(func.id)}
-                >
-                  削除
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      </div>
 
       </div>
 
@@ -1135,7 +1084,86 @@ export default function App() {
           </div>
         </Dialog>
       </Transition>
-      
+
+      {/* 機能マスタ一覧モーダル */}
+      <Transition appear show={isFunctionMasterListOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-10" onClose={() => setIsFunctionMasterListOpen(false)}>
+          <div className="fixed inset-0 bg-black bg-opacity-25" />
+          <div className="fixed inset-0 overflow-y-auto flex items-center justify-center p-4">
+            <Dialog.Panel className="w-full max-w-2xl bg-white rounded p-6 shadow">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold">機能マスタ保守</h3>
+                <button
+                  className="px-2 py-1 bg-green-500 text-white rounded"
+                  onClick={openNewFunctionMasterModal}
+                >
+                  新規作成
+                </button>
+              </div>
+              <div className="max-h-80 overflow-y-auto">
+                <table className="min-w-max border-collapse border border-gray-300 mb-4 w-full">
+                  <thead>
+                    <tr className="bg-gray-200">
+                      <th className="px-2 py-1 border">ID</th>
+                      <th className="px-2 py-1 border">名称</th>
+                      <th className="px-2 py-1 border">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {functionOrder
+                      .map((id: number) => allFunctions.find((f) => f.id === id))
+                      .filter((f): f is FunctionMaster => !!f)
+                      .map((func, idx) => (
+                        <tr
+                          key={func.id}
+                          className="hover:bg-gray-50"
+                          draggable
+                          onDragStart={() => setDragIndex(idx)}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={() => {
+                            if (dragIndex === null) return;
+                            const newOrder = [...functionOrder];
+                            const [moved] = newOrder.splice(dragIndex, 1);
+                            newOrder.splice(idx, 0, moved);
+                            setFunctionOrder(newOrder);
+                            setCookie('functionOrder', newOrder.join(','));
+                            setDragIndex(null);
+                          }}
+                        >
+                          <td className="border px-2">{func.id}</td>
+                          <td className="border px-2">{func.name}</td>
+                          <td className="border px-2">
+                            <button
+                              className="px-2 py-1 bg-blue-500 text-white rounded mr-2"
+                              onClick={() => openEditFunctionMasterModal(func)}
+                            >
+                              編集
+                            </button>
+                            <button
+                              className="px-2 py-1 bg-red-500 text-white rounded"
+                              onClick={() => handleDeleteFunctionMaster(func.id)}
+                            >
+                              削除
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  className="px-4 py-2 bg-gray-500 text-white rounded"
+                  onClick={() => setIsFunctionMasterListOpen(false)}
+                >
+                  閉じる
+                </button>
+              </div>
+            </Dialog.Panel>
+          </div>
+        </Dialog>
+      </Transition>
+
       {/* 機能マスタ追加/編集モーダル */}
       <Transition appear show={isFunctionMasterModalOpen} as={Fragment}>
         <Dialog as="div" className="relative z-10" onClose={() => setIsFunctionMasterModalOpen(false)}>
