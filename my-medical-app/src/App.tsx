@@ -543,8 +543,8 @@ export default function App() {
   );
 
   return (
-    <div className="bg-gray-100 min-h-screen p-0">
-      <div className="flex items-center mb-4">
+    <div className="bg-gray-100 h-screen p-0 overflow-hidden flex flex-col">
+      <div className="flex items-center mb-4 p-4 bg-gray-100 flex-none sticky top-0 z-10">
         <h1 className="text-2xl font-bold">医療機関一覧</h1>
         <div className="relative ml-4">
           <button
@@ -554,7 +554,7 @@ export default function App() {
             &#9776;
           </button>
           {isMenuOpen && (
-            <div className="absolute mt-2 bg-white border rounded shadow flex space-x-2">
+            <div className="absolute mt-2 bg-white border rounded shadow flex flex-col space-y-2">
               <button
                 onClick={() => {
                   setIsColumnModalOpen(true);
@@ -609,6 +609,7 @@ export default function App() {
         </div>
       </div>
 
+      <div className="flex-1 overflow-y-auto p-4">
       {/* 検索 */}
       <div className="mb-4 flex items-center gap-2">
         <input
@@ -620,8 +621,8 @@ export default function App() {
         />
       </div>
 
-      {/* テーブル */}
-      <div className="overflow-x-auto">
+        {/* テーブル */}
+        <div className="overflow-x-auto">
         <table className="min-w-max border-collapse border border-gray-300">
           <thead>
             <tr className="bg-gray-200 text-left">
@@ -775,6 +776,8 @@ export default function App() {
           ))}
         </tbody>
       </table>
+
+      </div>
 
       {/* モーダル */}
       <Transition appear show={isColumnModalOpen} as={Fragment}>
