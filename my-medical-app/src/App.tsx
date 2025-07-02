@@ -1,6 +1,7 @@
 // App.tsx
 import React, { useEffect, useState, Fragment } from 'react';
 import { Dialog, Transition, Switch } from '@headlessui/react';
+import './App.css';
 
 const setCookie = (name: string, value: string) => {
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/`;
@@ -543,9 +544,9 @@ export default function App() {
 
   return (
     <div className="bg-gray-100 min-h-screen p-4">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center mb-4">
         <h1 className="text-2xl font-bold">医療機関一覧</h1>
-        <div className="relative">
+        <div className="relative ml-4">
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="px-3 py-2 bg-gray-200 rounded"
@@ -553,7 +554,7 @@ export default function App() {
             &#9776;
           </button>
           {isMenuOpen && (
-            <div className="absolute right-0 mt-2 bg-white border rounded shadow flex flex-col">
+            <div className="absolute mt-2 bg-white border rounded shadow flex flex-col space-y-2">
               <button
                 onClick={() => {
                   setIsColumnModalOpen(true);
@@ -588,20 +589,20 @@ export default function App() {
               <button
                 className="px-4 py-2 hover:bg-gray-100 text-left"
                 onClick={() => {
-                  handleExportCsv();
-                  setIsMenuOpen(false);
-                }}
-              >
-                CSV出力
-              </button>
-              <button
-                className="px-4 py-2 hover:bg-gray-100 text-left"
-                onClick={() => {
                   openNewFunctionMasterModal();
                   setIsMenuOpen(false);
                 }}
               >
                 新規機能マスタ追加
+              </button>
+              <button
+                className="px-4 py-2 hover:bg-gray-100 text-left"
+                onClick={() => {
+                  handleExportCsv();
+                  setIsMenuOpen(false);
+                }}
+              >
+                CSV出力
               </button>
             </div>
           )}
@@ -617,45 +618,6 @@ export default function App() {
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
         />
-        <button
-          onClick={() => setIsColumnModalOpen(true)}
-          className="px-4 py-2 bg-blue-500 text-white rounded"
-        >
-          表示項目変更
-        </button>
-        <button
-          className="px-4 py-2 bg-green-500 text-white rounded"
-          onClick={() => {
-            setEditingFacility({
-              id: 0,
-              short_name: '',
-              official_name: '',
-              prefecture: '',
-              city: '',
-              address_detail: '',
-              phone_numbers: [],
-              emails: [],
-              fax: '',
-              remarks: '',
-              functions: [],
-            });
-            setIsFacilityModalOpen(true);
-          }}
-        >
-          新規医療機関追加
-        </button>
-        <button
-          className="px-4 py-2 bg-green-500 text-white rounded"
-          onClick={handleExportCsv}
-        >
-          CSV出力
-        </button>
-        <button
-          className="px-4 py-2 bg-green-500 text-white rounded"
-          onClick={openNewFunctionMasterModal}
-        >
-          新規機能マスタ追加
-        </button>
       </div>
 
       {/* テーブル */}
@@ -692,8 +654,12 @@ export default function App() {
                       return (
                         <td
                           key={col.key}
-                          className="py-2 px-4 border whitespace-nowrap"
-                          title={fEntry?.function.memo || ''}
+                          className="py-2 px-4 border whitespace-nowrap tooltip-container"
+                          data-tooltip={
+                            allFunctions.find((f) => f.id === funcId)?.memo ||
+                            allFunctions.find((f) => f.id === funcId)?.name ||
+                            'なし'
+                          }
                           onContextMenu={(e) =>
                             handleRightClick(e, facility.id, funcId)
                           }
@@ -735,7 +701,10 @@ export default function App() {
                               const display = lines.slice(0, 3);
                               const truncated = lines.length > 3;
                               return (
-                                <div title={truncated ? val : undefined} className="flex flex-col">
+                                <div
+                                  className="flex flex-col tooltip-container"
+                                  data-tooltip={val}
+                                >
                                   {display.map((l, i) => (
                                     <div key={i}>{l}</div>
                                   ))}
