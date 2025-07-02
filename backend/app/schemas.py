@@ -12,6 +12,7 @@ class FunctionBase(BaseModel):
     id: int
     name: str
     description: Optional[str]
+    memo: Optional[str]
     selection_type: str
     choices: List[str]
 
@@ -24,6 +25,7 @@ class FunctionCreate(BaseModel):
 
     name: str
     description: Optional[str] = None
+    memo: Optional[str] = None
     selection_type: str
     choices: List[str] = []
 
@@ -79,6 +81,7 @@ class FunctionUpdate(BaseModel):
     """
     name: Optional[str] = None
     description: Optional[str] = None
+    memo: Optional[str] = None
     selection_type: Optional[str] = None
     choices: Optional[List[str]] = None
 

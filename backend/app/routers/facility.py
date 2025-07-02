@@ -25,7 +25,11 @@ def read_facilities(skip: int = 0, limit: int | None = None, db: Session = Depen
     医療機関情報の一覧を取得するAPI。
     ページネーションとして skip / limit を指定可能。
     """
-    query = db.query(models.MedicalFacility).offset(skip)
+    query = (
+        db.query(models.MedicalFacility)
+        .filter(models.MedicalFacility.is_deleted == False)
+        .offset(skip)
+    )
     if limit is not None:
         query = query.limit(limit)
     facilities = query.all()
@@ -77,6 +81,6 @@ def delete_facility(facility_id: int, db: Session = Depends(get_db)):
     if not db_facility:
         raise HTTPException(status_code=404, detail="Facility not found")
 
-    db.delete(db_facility)
+    db_facility.is_deleted = True
     db.commit()
     return {"message": "Facility deleted successfully"}
