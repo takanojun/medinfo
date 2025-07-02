@@ -543,7 +543,7 @@ export default function App() {
   );
 
   return (
-    <div className="bg-gray-100 min-h-screen p-4">
+    <div className="bg-gray-100 min-h-screen p-0">
       <div className="flex items-center mb-4">
         <h1 className="text-2xl font-bold">医療機関一覧</h1>
         <div className="relative ml-4">
@@ -554,7 +554,7 @@ export default function App() {
             &#9776;
           </button>
           {isMenuOpen && (
-            <div className="absolute mt-2 bg-white border rounded shadow flex flex-col space-y-2">
+            <div className="absolute mt-2 bg-white border rounded shadow flex space-x-2">
               <button
                 onClick={() => {
                   setIsColumnModalOpen(true);
