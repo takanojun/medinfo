@@ -20,6 +20,7 @@ interface FacilityFunctionEntry {
   function: {
     id: number;
     name: string;
+    memo?: string;
     selection_type?: 'single' | 'multiple'; // 選択肢のタイプ
     choices?: string[]; // 選択肢
   };
@@ -47,6 +48,7 @@ interface Facility {
 interface FunctionMaster {
   id: number;
   name: string;
+  memo?: string;
   selection_type?: 'single' | 'multiple';
   choices?: string[];
 }
@@ -69,8 +71,11 @@ export default function App() {
   const [newFunctionName, setNewFunctionName] = useState('');
   const [newSelectionType, setNewSelectionType] = useState<'single' | 'multiple'>('single');
   const [newChoices, setNewChoices] = useState<string>('');
+  const [newMemo, setNewMemo] = useState<string>('');
   const [editingFunctionMaster, setEditingFunctionMaster] = useState<FunctionMaster | null>(null);
   const [modalSearchText, setModalSearchText] = useState('');
+
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // 医療機関編集モーダル用
   const [isFacilityModalOpen, setIsFacilityModalOpen] = useState(false);
@@ -319,6 +324,21 @@ export default function App() {
       .catch((err) => console.error('保存エラー:', err));
   };
 
+  const handleDeleteFacility = () => {
+    if (!editingFacility || editingFacility.id === 0) return;
+    if (!window.confirm('削除してよろしいですか？')) return;
+    fetch(`http://192.168.174.29:8001/facilities/${editingFacility.id}`, {
+      method: 'DELETE',
+    })
+      .then((res) => res.json())
+      .then(() => {
+        setIsFacilityModalOpen(false);
+        setEditingFacility(null);
+        fetchFacilities();
+      })
+      .catch((err) => console.error('削除エラー:', err));
+  };
+
 
   const handleSaveFunctionEntry = () => {
     if (!editingEntry || editingFacilityId === null) return;
@@ -362,6 +382,7 @@ export default function App() {
     setNewFunctionName('');
     setNewSelectionType('single');
     setNewChoices('');
+    setNewMemo('');
     setIsFunctionMasterModalOpen(true);
   };
 
@@ -370,6 +391,7 @@ export default function App() {
     setNewFunctionName(func.name);
     setNewSelectionType(func.selection_type || 'single');
     setNewChoices((func.choices || []).join('\n'));
+    setNewMemo(func.memo || '');
     setIsFunctionMasterModalOpen(true);
   };
 
@@ -381,6 +403,7 @@ export default function App() {
         .split('\n')
         .map((c) => c.trim())
         .filter((c) => c),
+      memo: newMemo || undefined,
     };
     const url = editingFunctionMaster
       ? `http://192.168.174.29:8001/functions/${editingFunctionMaster.id}`
@@ -398,6 +421,7 @@ export default function App() {
         setNewFunctionName('');
         setNewSelectionType('single');
         setNewChoices('');
+        setNewMemo('');
         refreshData();
       })
       .catch((err) => console.error('保存エラー:', err));
@@ -519,7 +543,70 @@ export default function App() {
 
   return (
     <div className="bg-gray-100 min-h-screen p-4">
-      <h1 className="text-2xl font-bold mb-4">医療機関一覧</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold">医療機関一覧</h1>
+        <div className="relative">
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="px-3 py-2 bg-gray-200 rounded"
+          >
+            &#9776;
+          </button>
+          {isMenuOpen && (
+            <div className="absolute right-0 mt-2 bg-white border rounded shadow flex flex-col">
+              <button
+                onClick={() => {
+                  setIsColumnModalOpen(true);
+                  setIsMenuOpen(false);
+                }}
+                className="px-4 py-2 hover:bg-gray-100 text-left"
+              >
+                表示項目変更
+              </button>
+              <button
+                className="px-4 py-2 hover:bg-gray-100 text-left"
+                onClick={() => {
+                  setEditingFacility({
+                    id: 0,
+                    short_name: '',
+                    official_name: '',
+                    prefecture: '',
+                    city: '',
+                    address_detail: '',
+                    phone_numbers: [],
+                    emails: [],
+                    fax: '',
+                    remarks: '',
+                    functions: [],
+                  });
+                  setIsFacilityModalOpen(true);
+                  setIsMenuOpen(false);
+                }}
+              >
+                新規医療機関追加
+              </button>
+              <button
+                className="px-4 py-2 hover:bg-gray-100 text-left"
+                onClick={() => {
+                  handleExportCsv();
+                  setIsMenuOpen(false);
+                }}
+              >
+                CSV出力
+              </button>
+              <button
+                className="px-4 py-2 hover:bg-gray-100 text-left"
+                onClick={() => {
+                  openNewFunctionMasterModal();
+                  setIsMenuOpen(false);
+                }}
+              >
+                新規機能マスタ追加
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* 検索 */}
       <div className="mb-4 flex items-center gap-2">
@@ -606,15 +693,21 @@ export default function App() {
                         <td
                           key={col.key}
                           className="py-2 px-4 border whitespace-nowrap"
+                          title={fEntry?.function.memo || ''}
                           onContextMenu={(e) =>
                             handleRightClick(e, facility.id, funcId)
                           }
                         >
-                          {fEntry
-                            ? fEntry.selected_values.length || fEntry.remarks
-                              ? `${fEntry.selected_values.join(', ')}${fEntry.remarks ? `（${fEntry.remarks}）` : ''}`
-                              : '-'
-                            : '-'}
+                          {fEntry ? (
+                            <div className="flex flex-col">
+                              {fEntry.selected_values.map((v, i) => (
+                                <div key={i}>{v}</div>
+                              ))}
+                              {fEntry.remarks && <div>{fEntry.remarks}</div>}
+                            </div>
+                          ) : (
+                            '-'
+                          )}
                         </td>
                       );
                     } else {
@@ -625,16 +718,34 @@ export default function App() {
                           className="py-2 px-4 border whitespace-nowrap"
                           onContextMenu={(e) => handleFacilityCellRightClick(e, facility)}
                         >
-                          {(
-                            Array.isArray(val)
-                              ? val
-                                  .map((v: ContactInfo) =>
-                                    v.value ? `${v.value}${v.comment ? `（${v.comment}）` : ''}` : ''
-                                  )
-                                  .filter((v) => v)
-                                  .join(', ')
-                              : val || '-'
-                          ) as React.ReactNode}
+                          {Array.isArray(val) ? (
+                            <div className="flex flex-col">
+                              {(val as ContactInfo[])
+                                .map((v) =>
+                                  v.value ? `${v.value}${v.comment ? `（${v.comment}）` : ''}` : ''
+                                )
+                                .filter((v) => v)
+                                .map((v, i) => (
+                                  <div key={i}>{v}</div>
+                                ))}
+                            </div>
+                          ) : col.key === 'remarks' && typeof val === 'string' ? (
+                            (() => {
+                              const lines = val.split('\n');
+                              const display = lines.slice(0, 3);
+                              const truncated = lines.length > 3;
+                              return (
+                                <div title={truncated ? val : undefined} className="flex flex-col">
+                                  {display.map((l, i) => (
+                                    <div key={i}>{l}</div>
+                                  ))}
+                                  {truncated && <div>...</div>}
+                                </div>
+                              );
+                            })()
+                          ) : (
+                            (val as React.ReactNode) || '-'
+                          )}
                         </td>
                       ) as React.ReactNode;
                     }
@@ -941,6 +1052,14 @@ export default function App() {
                     >
                       キャンセル
                     </button>
+                    {editingFacility?.id !== 0 && (
+                      <button
+                        onClick={handleDeleteFacility}
+                        className="px-4 py-2 bg-red-500 text-white rounded mr-2"
+                      >
+                        削除
+                      </button>
+                    )}
                     <button
                       onClick={handleSaveFacility}
                       className="px-4 py-2 bg-blue-500 text-white rounded"
@@ -1089,6 +1208,15 @@ export default function App() {
                 value={newChoices}
                 onChange={(e) => setNewChoices(e.target.value)}
                 rows={5}
+                className="border p-2 w-full mb-4"
+              />
+
+              {/* メモ */}
+              <textarea
+                placeholder="メモ"
+                value={newMemo}
+                onChange={(e) => setNewMemo(e.target.value)}
+                rows={3}
                 className="border p-2 w-full mb-4"
               />
 

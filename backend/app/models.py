@@ -16,6 +16,7 @@ class MedicalFacility(Base):
     emails = Column(JSON)
     fax = Column(Text)
     remarks = Column(Text)
+    is_deleted = Column(Boolean, default=False)
 
     # 関連する機能情報をリレーションで持たせる
     functions = relationship("FacilityFunctionEntry", back_populates="facility", cascade="all, delete-orphan")
@@ -27,6 +28,7 @@ class Function(Base):
     id = Column(Integer, primary_key=True)
     name = Column(Text, nullable=False)
     description = Column(Text)
+    memo = Column(Text)
     selection_type = Column(Text, CheckConstraint("selection_type IN ('single', 'multiple')"))
     choices = Column(ARRAY(Text))
     is_deleted = Column(Boolean, default=False)
