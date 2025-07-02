@@ -546,7 +546,7 @@ export default function App() {
   return (
     <div className="bg-gray-100 h-screen p-0 overflow-hidden flex flex-col">
       <div className="flex items-center mb-2 p-2 bg-gray-100 flex-none sticky top-0 z-30">
-        <h1 className="text-2xl font-bold">医療機関一覧</h1>
+        <h1 className="text-2xl font-bold">医療機関機能一覧</h1>
         <div className="relative ml-4">
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
