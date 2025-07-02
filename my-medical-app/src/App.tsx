@@ -609,7 +609,7 @@ export default function App() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-hidden p-4 flex flex-col">
       {/* 検索 */}
       <div className="mb-4 flex items-center gap-2">
         <input
@@ -622,10 +622,10 @@ export default function App() {
       </div>
 
         {/* テーブル */}
-        <div className="overflow-x-auto">
+        <div className="flex-1 overflow-x-auto overflow-y-auto">
         <table className="min-w-max border-collapse border border-gray-300">
-          <thead>
-            <tr className="bg-gray-200 text-left">
+          <thead className="sticky top-0 z-10 bg-gray-200">
+            <tr className="text-left">
               {columns
                 .filter((col) => visibleColumns[col.key])
                 .map((col) => (
@@ -726,7 +726,8 @@ export default function App() {
         </table>
       </div>
 
-      <h2 className="text-xl font-bold mt-8 mb-2">機能マスタ一覧</h2>
+      <div className="mt-8 overflow-y-auto max-h-60">
+      <h2 className="text-xl font-bold mb-2">機能マスタ一覧</h2>
       <table className="min-w-max border-collapse border border-gray-300 mb-4">
         <thead>
           <tr className="bg-gray-200">
@@ -776,6 +777,7 @@ export default function App() {
           ))}
         </tbody>
       </table>
+      </div>
 
       </div>
 
