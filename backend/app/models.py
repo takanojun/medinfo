@@ -2,6 +2,16 @@ from sqlalchemy import Column, Integer, String, Text, ForeignKey, ARRAY, CheckCo
 from sqlalchemy.orm import relationship
 from .database import Base
 
+# 機能カテゴリテーブル
+class FunctionCategory(Base):
+    __tablename__ = "function_categories"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(Text, nullable=False)
+    description = Column(Text)
+
+    functions = relationship("Function", back_populates="category")
+
 # 医療機関テーブル
 class MedicalFacility(Base):
     __tablename__ = "medical_facility"
@@ -31,8 +41,10 @@ class Function(Base):
     memo = Column(Text)
     selection_type = Column(Text, CheckConstraint("selection_type IN ('single', 'multiple')"))
     choices = Column(ARRAY(Text))
+    category_id = Column(Integer, ForeignKey("function_categories.id"))
     is_deleted = Column(Boolean, default=False)
 
+    category = relationship("FunctionCategory", back_populates="functions")
     # 機能エントリ（中間テーブル）側からの逆参照
     entries = relationship("FacilityFunctionEntry", back_populates="function", cascade="all, delete-orphan")
 

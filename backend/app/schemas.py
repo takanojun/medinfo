@@ -6,6 +6,15 @@ class ContactInfo(BaseModel):
     value: str
     comment: Optional[str] = None
 
+class FunctionCategoryBase(BaseModel):
+    id: int
+    name: str
+    description: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
 class FunctionBase(BaseModel):
     """機能マスタの基本スキーマ (読み取り用)"""
 
@@ -15,6 +24,7 @@ class FunctionBase(BaseModel):
     memo: Optional[str]
     selection_type: str
     choices: List[str]
+    category_id: Optional[int]
 
     class Config:
         from_attributes = True
@@ -28,6 +38,7 @@ class FunctionCreate(BaseModel):
     memo: Optional[str] = None
     selection_type: str
     choices: List[str] = []
+    category_id: Optional[int] = None
 
 
 class FacilityFunctionEntryBase(BaseModel):
@@ -84,6 +95,7 @@ class FunctionUpdate(BaseModel):
     memo: Optional[str] = None
     selection_type: Optional[str] = None
     choices: Optional[List[str]] = None
+    category_id: Optional[int] = None
 
 class FacilityFunctionEntryUpdate(BaseModel):
     """
@@ -94,4 +106,14 @@ class FacilityFunctionEntryUpdate(BaseModel):
     function_id: Optional[int] = None
     selected_values: Optional[List[str]] = None
     remarks: Optional[str] = None
+
+
+class FunctionCategoryCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+
+class FunctionCategoryUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
 
