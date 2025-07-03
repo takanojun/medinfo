@@ -147,18 +147,20 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    fetch(`${apiBase}/function-categories`)
-      .then((res) => res.json())
-      .then((data) => {
-        setAllCategories(data);
-        let order = data.map((c: FunctionCategory) => c.id);
+    Promise.all([
+      fetch(`${apiBase}/function-categories`).then((res) => res.json()),
+      fetch(`${apiBase}/functions`).then((res) => res.json()),
+    ])
+      .then(([catData, funcData]) => {
+        setAllCategories(catData);
+        let order = catData.map((c: FunctionCategory) => c.id);
         const saved = getCookie('categoryOrder');
         if (saved) {
           const parsed = saved
             .split(',')
             .map((v) => parseInt(v))
-            .filter((v) => data.some((c: FunctionCategory) => c.id === v));
-          const missing = data
+            .filter((v) => catData.some((c: FunctionCategory) => c.id === v));
+          const missing = catData
             .map((c: FunctionCategory) => c.id)
             .filter((id: number) => !parsed.includes(id));
           order = [...parsed, ...missing];
@@ -166,10 +168,17 @@ export default function App() {
         setCategoryOrder(order);
         setCookie('categoryOrder', order.join(','));
 
+        const hasUncategorized = funcData.some(
+          (f: FunctionMaster) => f.category_id === null,
+        );
+
         const g: Record<string, boolean> = { facility: true };
         order.forEach((id: number) => {
           g[`cat_${id}`] = true;
         });
+        if (hasUncategorized) {
+          g['cat_null'] = true;
+        }
         const savedGroups = getCookie('visibleColumnGroups');
         if (savedGroups) {
           try {
@@ -188,6 +197,9 @@ export default function App() {
         order.forEach((id: number) => {
           c[`cat_${id}`] = false;
         });
+        if (hasUncategorized) {
+          c['cat_null'] = false;
+        }
         const savedColl = getCookie('collapsedColumnGroups');
         if (savedColl) {
           try {
@@ -201,29 +213,22 @@ export default function App() {
         }
         setCollapsedGroups(c);
         setCookie('collapsedColumnGroups', JSON.stringify(c));
-      })
-      .catch((err) => {
-        console.error('カテゴリ取得エラー:', err);
-        showError('カテゴリの取得に失敗しました');
-      });
-    fetch(`${apiBase}/functions`)
-      .then(res => res.json())
-      .then(data => {
-        setAllFunctions(data);
-        let order = data.map((f: FunctionMaster) => f.id);
+
+        setAllFunctions(funcData);
+        let orderF = funcData.map((f: FunctionMaster) => f.id);
         const savedOrder = getCookie('functionOrder');
         if (savedOrder) {
           const parsed = savedOrder
             .split(',')
             .map((v) => parseInt(v))
-            .filter((v) => data.some((f: FunctionMaster) => f.id === v));
-          const missing = data
+            .filter((v) => funcData.some((f: FunctionMaster) => f.id === v));
+          const missing = funcData
             .map((f: FunctionMaster) => f.id)
             .filter((id: number) => !parsed.includes(id));
-          order = [...parsed, ...missing];
+          orderF = [...parsed, ...missing];
         }
-        setFunctionOrder(order);
-        setCookie('functionOrder', order.join(','));
+        setFunctionOrder(orderF);
+        setCookie('functionOrder', orderF.join(','));
         const newColumns: Record<string, boolean> = {
           id: true,
           short_name: true,
@@ -236,13 +241,13 @@ export default function App() {
           fax: true,
           remarks: true,
         };
-        data.forEach((func: FunctionMaster) => {
+        funcData.forEach((func: FunctionMaster) => {
           newColumns[`func_${func.id}`] = true;
         });
-        const saved = getCookie('visibleColumns');
-        if (saved) {
+        const savedCols = getCookie('visibleColumns');
+        if (savedCols) {
           try {
-            const parsed = JSON.parse(saved);
+            const parsed = JSON.parse(savedCols);
             Object.keys(parsed).forEach((k) => {
               if (k in newColumns) {
                 newColumns[k] = parsed[k];
@@ -255,9 +260,9 @@ export default function App() {
         setVisibleColumns(newColumns);
         setCookie('visibleColumns', JSON.stringify(newColumns));
       })
-      .catch(err => {
-        console.error('機能マスタ取得エラー:', err);
-        showError('機能マスタの取得に失敗しました');
+      .catch((err) => {
+        console.error('初期データ取得エラー:', err);
+        showError('データの取得に失敗しました');
       });
   }, []);
 
@@ -284,10 +289,15 @@ export default function App() {
         setCategoryOrder(catOrder);
         setCookie('categoryOrder', catOrder.join(','));
 
+        const hasUncategorized = funcData.some((f: FunctionMaster) => f.category_id === null);
+
         const g: Record<string, boolean> = { facility: visibleGroups['facility'] ?? true };
         catOrder.forEach((id: number) => {
           g[`cat_${id}`] = visibleGroups[`cat_${id}`] ?? true;
         });
+        if (hasUncategorized) {
+          g['cat_null'] = visibleGroups['cat_null'] ?? true;
+        }
         const savedGroups = getCookie('visibleColumnGroups');
         if (savedGroups) {
           try {
@@ -306,6 +316,9 @@ export default function App() {
         catOrder.forEach((id: number) => {
           c[`cat_${id}`] = collapsedGroups[`cat_${id}`] ?? false;
         });
+        if (hasUncategorized) {
+          c['cat_null'] = collapsedGroups['cat_null'] ?? false;
+        }
         const savedColl = getCookie('collapsedColumnGroups');
         if (savedColl) {
           try {
@@ -360,12 +373,17 @@ export default function App() {
       });
   };
 
+  const hasUncategorizedColumn = allFunctions.some(
+    (f) => f.category_id === null,
+  );
+
   const columnGroups = [
     { id: 'facility', label: '医療機関情報' },
     ...categoryOrder
       .map((id) => allCategories.find((c) => c.id === id))
       .filter((c): c is FunctionCategory => !!c)
       .map((cat) => ({ id: `cat_${cat.id}`, label: cat.name })),
+    ...(hasUncategorizedColumn ? [{ id: 'cat_null', label: '未選択' }] : []),
   ];
 
   const columns = [
