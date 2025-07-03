@@ -3,6 +3,8 @@ import React, { useEffect, useState, Fragment } from 'react';
 import { Dialog, Transition, Switch } from '@headlessui/react';
 import './App.css';
 
+const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+
 const setCookie = (name: string, value: string) => {
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/`;
 };
@@ -77,6 +79,13 @@ export default function App() {
   const [editingFunctionMaster, setEditingFunctionMaster] = useState<FunctionMaster | null>(null);
   const [modalSearchText, setModalSearchText] = useState('');
 
+  const [notification, setNotification] = useState<string | null>(null);
+
+  const showError = (message: string) => {
+    setNotification(message);
+    setTimeout(() => setNotification(null), 5000);
+  };
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // 医療機関編集モーダル用
@@ -101,10 +110,13 @@ export default function App() {
   });
 
   const fetchFacilities = () =>
-    fetch('http://192.168.174.29:8001/facilities')
+    fetch(`${apiBase}/facilities`)
       .then((res) => res.json())
       .then((data) => setFacilities(data.map(normalizeFacility)))
-      .catch((err) => console.error('施設情報取得エラー:', err));
+      .catch((err) => {
+        console.error('施設情報取得エラー:', err);
+        showError('施設情報の取得に失敗しました');
+      });
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -112,7 +124,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    fetch('http://192.168.174.29:8001/functions')
+    fetch(`${apiBase}/functions`)
       .then(res => res.json())
       .then(data => {
         setAllFunctions(data);
@@ -161,13 +173,16 @@ export default function App() {
         setVisibleColumns(newColumns);
         setCookie('visibleColumns', JSON.stringify(newColumns));
       })
-      .catch(err => console.error('機能マスタ取得エラー:', err));
+      .catch(err => {
+        console.error('機能マスタ取得エラー:', err);
+        showError('機能マスタの取得に失敗しました');
+      });
   }, []);
 
   const refreshData = () => {
     Promise.all([
-      fetch('http://192.168.174.29:8001/functions').then((res) => res.json()),
-      fetch('http://192.168.174.29:8001/facilities').then((res) => res.json()),
+      fetch(`${apiBase}/functions`).then((res) => res.json()),
+      fetch(`${apiBase}/facilities`).then((res) => res.json()),
     ])
       .then(([funcData, facData]) => {
         setAllFunctions(funcData);
@@ -204,7 +219,10 @@ export default function App() {
         setVisibleColumns(cols);
         setCookie('visibleColumns', JSON.stringify(cols));
       })
-      .catch((err) => console.error('再取得エラー:', err));
+      .catch((err) => {
+        console.error('再取得エラー:', err);
+        showError('データの再取得に失敗しました');
+      });
   };
 
   const columns = [
@@ -305,12 +323,12 @@ export default function App() {
 
     const request =
       editingFacility.id === 0
-        ? fetch('http://192.168.174.29:8001/facilities', {
+        ? fetch(`${apiBase}/facilities`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
           })
-        : fetch(`http://192.168.174.29:8001/facilities/${editingFacility.id}`, {
+        : fetch(`${apiBase}/facilities/${editingFacility.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
@@ -323,13 +341,16 @@ export default function App() {
         setEditingFacility(null);
         fetchFacilities();
       })
-      .catch((err) => console.error('保存エラー:', err));
+      .catch((err) => {
+        console.error('保存エラー:', err);
+        showError('保存に失敗しました');
+      });
   };
 
   const handleDeleteFacility = () => {
     if (!editingFacility || editingFacility.id === 0) return;
     if (!window.confirm('削除してよろしいですか？')) return;
-    fetch(`http://192.168.174.29:8001/facilities/${editingFacility.id}`, {
+    fetch(`${apiBase}/facilities/${editingFacility.id}`, {
       method: 'DELETE',
     })
       .then((res) => res.json())
@@ -338,7 +359,10 @@ export default function App() {
         setEditingFacility(null);
         fetchFacilities();
       })
-      .catch((err) => console.error('削除エラー:', err));
+      .catch((err) => {
+        console.error('削除エラー:', err);
+        showError('削除に失敗しました');
+      });
   };
 
 
@@ -352,7 +376,7 @@ export default function App() {
 
     const request =
       editingEntry.id === 0
-        ? fetch('http://192.168.174.29:8001/facility-function-entries', {
+        ? fetch(`${apiBase}/facility-function-entries`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -362,7 +386,7 @@ export default function App() {
             }),
           })
         : fetch(
-            `http://192.168.174.29:8001/facility-function-entries/${editingEntry.id}`,
+            `${apiBase}/facility-function-entries/${editingEntry.id}`,
             {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
@@ -376,7 +400,10 @@ export default function App() {
         setIsFunctionModalOpen(false);
         fetchFacilities();
       })
-      .catch((err) => console.error('保存エラー:', err));
+      .catch((err) => {
+        console.error('保存エラー:', err);
+        showError('保存に失敗しました');
+      });
   };
 
   const openNewFunctionMasterModal = () => {
@@ -408,8 +435,8 @@ export default function App() {
       memo: newMemo || undefined,
     };
     const url = editingFunctionMaster
-      ? `http://192.168.174.29:8001/functions/${editingFunctionMaster.id}`
-      : 'http://192.168.174.29:8001/functions';
+      ? `${apiBase}/functions/${editingFunctionMaster.id}`
+      : `${apiBase}/functions`;
     const method = editingFunctionMaster ? 'PUT' : 'POST';
     fetch(url, {
       method,
@@ -426,17 +453,23 @@ export default function App() {
         setNewMemo('');
         refreshData();
       })
-      .catch((err) => console.error('保存エラー:', err));
+      .catch((err) => {
+        console.error('保存エラー:', err);
+        showError('保存に失敗しました');
+      });
   };
 
   const handleDeleteFunctionMaster = (id: number) => {
     if (!window.confirm('削除してよろしいですか？')) return;
-    fetch(`http://192.168.174.29:8001/functions/${id}`, { method: 'DELETE' })
+    fetch(`${apiBase}/functions/${id}`, { method: 'DELETE' })
       .then((res) => res.json())
       .then(() => {
         refreshData();
       })
-      .catch((err) => console.error('削除エラー:', err));
+      .catch((err) => {
+        console.error('削除エラー:', err);
+        showError('削除に失敗しました');
+      });
   };
 
   const handleExportCsv = () => {
@@ -545,6 +578,11 @@ export default function App() {
 
   return (
     <div className="bg-gray-100 h-screen p-0 overflow-hidden flex flex-col">
+      {notification && (
+        <div className="bg-red-500 text-white px-4 py-2 text-sm text-center">
+          {notification}
+        </div>
+      )}
       <div className="flex items-center mb-2 p-2 bg-gray-100 flex-none sticky top-0 z-30">
         <h1 className="text-2xl font-bold">医療機関機能一覧</h1>
         <div className="relative ml-4">
