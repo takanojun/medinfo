@@ -77,6 +77,8 @@ export default function App() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'none'>('none');
 
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({});
+  const [visibleGroups, setVisibleGroups] = useState<Record<string, boolean>>({});
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   //const [isModalOpen, setIsModalOpen] = useState(false);
   const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
   const [isFunctionModalOpen, setIsFunctionModalOpen] = useState(false);
@@ -158,6 +160,42 @@ export default function App() {
         }
         setCategoryOrder(order);
         setCookie('categoryOrder', order.join(','));
+
+        const g: Record<string, boolean> = { facility: true };
+        order.forEach((id: number) => {
+          g[`cat_${id}`] = true;
+        });
+        const savedGroups = getCookie('visibleColumnGroups');
+        if (savedGroups) {
+          try {
+            const parsed = JSON.parse(savedGroups);
+            Object.keys(parsed).forEach((k) => {
+              if (k in g) g[k] = parsed[k];
+            });
+          } catch (e) {
+            console.error('Cookie parse error', e);
+          }
+        }
+        setVisibleGroups(g);
+        setCookie('visibleColumnGroups', JSON.stringify(g));
+
+        const c: Record<string, boolean> = { facility: false };
+        order.forEach((id: number) => {
+          c[`cat_${id}`] = false;
+        });
+        const savedColl = getCookie('collapsedColumnGroups');
+        if (savedColl) {
+          try {
+            const parsed = JSON.parse(savedColl);
+            Object.keys(parsed).forEach((k) => {
+              if (k in c) c[k] = parsed[k];
+            });
+          } catch (e) {
+            console.error('Cookie parse error', e);
+          }
+        }
+        setCollapsedGroups(c);
+        setCookie('collapsedColumnGroups', JSON.stringify(c));
       })
       .catch((err) => {
         console.error('カテゴリ取得エラー:', err);
@@ -241,6 +279,42 @@ export default function App() {
         setCategoryOrder(catOrder);
         setCookie('categoryOrder', catOrder.join(','));
 
+        const g: Record<string, boolean> = { facility: visibleGroups['facility'] ?? true };
+        catOrder.forEach((id: number) => {
+          g[`cat_${id}`] = visibleGroups[`cat_${id}`] ?? true;
+        });
+        const savedGroups = getCookie('visibleColumnGroups');
+        if (savedGroups) {
+          try {
+            const parsed = JSON.parse(savedGroups);
+            Object.keys(parsed).forEach((k) => {
+              if (k in g) g[k] = parsed[k];
+            });
+          } catch (e) {
+            console.error('Cookie parse error', e);
+          }
+        }
+        setVisibleGroups(g);
+        setCookie('visibleColumnGroups', JSON.stringify(g));
+
+        const c: Record<string, boolean> = { facility: collapsedGroups['facility'] ?? false };
+        catOrder.forEach((id: number) => {
+          c[`cat_${id}`] = collapsedGroups[`cat_${id}`] ?? false;
+        });
+        const savedColl = getCookie('collapsedColumnGroups');
+        if (savedColl) {
+          try {
+            const parsed = JSON.parse(savedColl);
+            Object.keys(parsed).forEach((k) => {
+              if (k in c) c[k] = parsed[k];
+            });
+          } catch (e) {
+            console.error('Cookie parse error', e);
+          }
+        }
+        setCollapsedGroups(c);
+        setCookie('collapsedColumnGroups', JSON.stringify(c));
+
         setAllFunctions(funcData);
         setFacilities(facData.map(normalizeFacility));
         let order = funcData.map((f: FunctionMaster) => f.id);
@@ -281,30 +355,63 @@ export default function App() {
       });
   };
 
+  const columnGroups = [
+    { id: 'facility', label: '医療機関情報' },
+    ...categoryOrder
+      .map((id) => allCategories.find((c) => c.id === id))
+      .filter((c): c is FunctionCategory => !!c)
+      .map((cat) => ({ id: `cat_${cat.id}`, label: cat.name })),
+  ];
+
   const columns = [
-    { key: 'id', label: 'ID' },
-    { key: 'short_name', label: '略名' },
-    { key: 'official_name', label: '正式名称' },
-    { key: 'prefecture', label: '都道府県' },
-    { key: 'city', label: '市町村' },
-    { key: 'address_detail', label: '住所詳細' },
-    { key: 'phone_numbers', label: '電話番号' },
-    { key: 'emails', label: 'メール' },
-    { key: 'fax', label: 'FAX' },
-    { key: 'remarks', label: '備考' },
+    { key: 'id', label: 'ID', group: 'facility' },
+    { key: 'short_name', label: '略名', group: 'facility' },
+    { key: 'official_name', label: '正式名称', group: 'facility' },
+    { key: 'prefecture', label: '都道府県', group: 'facility' },
+    { key: 'city', label: '市町村', group: 'facility' },
+    { key: 'address_detail', label: '住所詳細', group: 'facility' },
+    { key: 'phone_numbers', label: '電話番号', group: 'facility' },
+    { key: 'emails', label: 'メール', group: 'facility' },
+    { key: 'fax', label: 'FAX', group: 'facility' },
+    { key: 'remarks', label: '備考', group: 'facility' },
     ...functionOrder
       .map((id: number) => allFunctions.find((f) => f.id === id))
       .filter((f): f is FunctionMaster => !!f)
       .map((func) => ({
         key: `func_${func.id}`,
         label: func.name,
+        group: `cat_${func.category_id}`,
       })),
   ];
 
-  const toggleColumn = (key: string) => {
+  const toggleColumn = (key: string, groupId: string) => {
+    const newVal = !visibleColumns[key];
+    if (newVal && !visibleGroups[groupId]) {
+      setVisibleGroups((prev) => {
+        const updated = { ...prev, [groupId]: true };
+        setCookie('visibleColumnGroups', JSON.stringify(updated));
+        return updated;
+      });
+    }
     setVisibleColumns((prev) => {
-      const updated = { ...prev, [key]: !prev[key] };
+      const updated = { ...prev, [key]: newVal };
       setCookie('visibleColumns', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const toggleGroup = (groupId: string) => {
+    setVisibleGroups((prev) => {
+      const updated = { ...prev, [groupId]: !prev[groupId] };
+      setCookie('visibleColumnGroups', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const toggleCollapse = (groupId: string) => {
+    setCollapsedGroups((prev) => {
+      const updated = { ...prev, [groupId]: !prev[groupId] };
+      setCookie('collapsedColumnGroups', JSON.stringify(updated));
       return updated;
     });
   };
@@ -584,7 +691,9 @@ export default function App() {
   };
 
   const handleExportCsv = () => {
-    const visibleCols = columns.filter((c) => visibleColumns[c.key]);
+    const visibleCols = columns.filter(
+      (c) => visibleGroups[c.group] && visibleColumns[c.key] && !collapsedGroups[c.group]
+    );
     const header = visibleCols.map((c) => c.label).join(',');
     const formatVal = (v: string) => `="${v.replace(/"/g, '""')}"`;
 
@@ -784,26 +893,56 @@ export default function App() {
         <div className="flex-1 overflow-x-auto overflow-y-auto">
         <table className="min-w-max border-collapse border border-gray-300">
           <thead className="sticky top-0 z-10 bg-gray-200">
+            <tr>
+              {columnGroups.map((g) => {
+                if (!visibleGroups[g.id]) return null;
+                const colsInGroup = columns.filter(
+                  (c) => c.group === g.id && visibleColumns[c.key]
+                );
+                if (colsInGroup.length === 0) return null;
+                return (
+                  <th
+                    key={g.id}
+                    colSpan={colsInGroup.length}
+                    className="border px-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>{g.label}</span>
+                      <button
+                        onClick={() => toggleCollapse(g.id)}
+                        className="ml-2 text-sm"
+                      >
+                        {collapsedGroups[g.id] ? '+' : '-'}
+                      </button>
+                    </div>
+                  </th>
+                );
+              })}
+            </tr>
             <tr className="text-left">
-              {columns
-                .filter((col) => visibleColumns[col.key])
-                .map((col) => (
+              {columns.map((col) => {
+                if (!visibleGroups[col.group]) return null;
+                if (!visibleColumns[col.key]) return null;
+                return (
                   <th
                     key={col.key}
                     className="py-2 px-4 border cursor-pointer whitespace-nowrap"
+                    style={{ display: collapsedGroups[col.group] ? 'none' : undefined }}
                     onClick={() => handleSort(col.key)}
                   >
                     {col.label}{' '}
                     {sortKey === col.key && sortOrder !== 'none' &&
                       (sortOrder === 'asc' ? '▲' : '▼')}
                   </th>
-                ))}
+                );
+              })}
             </tr>
           </thead>
           <tbody>
             {sortedFacilities.map((facility) => (
               <tr key={facility.id} className="hover:bg-gray-50">
                 {columns
+                  .filter((col) => visibleGroups[col.group])
                   .filter((col) => visibleColumns[col.key])
                   .map((col) => {
                     if (col.key.startsWith('func_')) {
@@ -815,6 +954,7 @@ export default function App() {
                         <td
                           key={col.key}
                           className="py-2 px-4 border whitespace-nowrap tooltip-container"
+                          style={{ display: collapsedGroups[col.group] ? 'none' : undefined }}
                           data-tooltip={
                             allFunctions.find((f) => f.id === funcId)?.memo ||
                             allFunctions.find((f) => f.id === funcId)?.name ||
@@ -842,6 +982,7 @@ export default function App() {
                         <td
                           key={col.key}
                           className="py-2 px-4 border whitespace-nowrap"
+                          style={{ display: collapsedGroups[col.group] ? 'none' : undefined }}
                           onContextMenu={(e) => handleFacilityCellRightClick(e, facility)}
                         >
                           {Array.isArray(val) ? (
@@ -930,24 +1071,50 @@ export default function App() {
 
                   {/* トグルリスト */}
                   <div className="max-h-60 overflow-y-auto">
-                    {filteredColumns.map((col) => (
-                      <div key={col.key} className="flex justify-between items-center py-2">
-                        <span>{col.label}</span>
-                        <Switch
-                          checked={visibleColumns[col.key]}
-                          onChange={() => toggleColumn(col.key)}
-                          className={`${
-                            visibleColumns[col.key] ? 'bg-blue-500' : 'bg-gray-300'
-                          } relative inline-flex h-6 w-11 items-center rounded-full`}
-                        >
-                          <span
-                            className={`${
-                              visibleColumns[col.key] ? 'translate-x-6' : 'translate-x-1'
-                            } inline-block h-4 w-4 transform rounded-full bg-white transition`}
-                          />
-                        </Switch>
-                      </div>
-                    ))}
+                    {columnGroups.map((g) => {
+                      const cols = filteredColumns.filter((c) => c.group === g.id);
+                      if (cols.length === 0) return null;
+                      return (
+                        <div key={g.id} className="mb-2">
+                          <div className="flex justify-between items-center py-2 border-b">
+                            <span className="font-bold">{g.label}</span>
+                            <Switch
+                              checked={visibleGroups[g.id]}
+                              onChange={() => toggleGroup(g.id)}
+                              className={`${
+                                visibleGroups[g.id] ? 'bg-blue-500' : 'bg-gray-300'
+                              } relative inline-flex h-6 w-11 items-center rounded-full`}
+                            >
+                              <span
+                                className={`${
+                                  visibleGroups[g.id] ? 'translate-x-6' : 'translate-x-1'
+                                } inline-block h-4 w-4 transform rounded-full bg-white transition`}
+                              />
+                            </Switch>
+                          </div>
+                          <div className="ml-4">
+                            {cols.map((col) => (
+                              <div key={col.key} className="flex justify-between items-center py-2">
+                                <span>{col.label}</span>
+                                <Switch
+                                  checked={visibleColumns[col.key]}
+                                  onChange={() => toggleColumn(col.key, col.group)}
+                                  className={`${
+                                    visibleColumns[col.key] ? 'bg-blue-500' : 'bg-gray-300'
+                                  } relative inline-flex h-6 w-11 items-center rounded-full`}
+                                >
+                                  <span
+                                    className={`${
+                                      visibleColumns[col.key] ? 'translate-x-6' : 'translate-x-1'
+                                    } inline-block h-4 w-4 transform rounded-full bg-white transition`}
+                                  />
+                                </Switch>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   <div className="mt-4 flex justify-end">
