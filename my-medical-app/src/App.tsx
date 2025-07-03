@@ -604,7 +604,8 @@ export default function App() {
         .map((c) => c.trim())
         .filter((c) => c),
       memo: newMemo || undefined,
-      category_id: newFunctionCategoryId || undefined,
+      // category_id は null を明示的に送信して未選択状態に戻せるようにする
+      category_id: newFunctionCategoryId,
     };
     const url = editingFunctionMaster
       ? `${apiBase}/functions/${editingFunctionMaster.id}`
