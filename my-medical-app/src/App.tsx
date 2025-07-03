@@ -3,6 +3,8 @@ import React, { useEffect, useState, Fragment } from 'react';
 import { Dialog, Transition, Switch } from '@headlessui/react';
 import './App.css';
 
+const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+
 const setCookie = (name: string, value: string) => {
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/`;
 };
@@ -52,13 +54,23 @@ interface FunctionMaster {
   memo?: string;
   selection_type?: 'single' | 'multiple';
   choices?: string[];
+  category_id?: number;
+}
+
+interface FunctionCategory {
+  id: number;
+  name: string;
+  description?: string;
 }
 
 export default function App() {
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [allFunctions, setAllFunctions] = useState<FunctionMaster[]>([]);
+  const [allCategories, setAllCategories] = useState<FunctionCategory[]>([]);
+  const [categoryOrder, setCategoryOrder] = useState<number[]>([]);
   const [functionOrder, setFunctionOrder] = useState<number[]>([]);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragCategoryIndex, setDragCategoryIndex] = useState<number | null>(null);
 
   const [searchText, setSearchText] = useState('');
   const [sortKey, setSortKey] = useState<string>('id');
@@ -74,8 +86,21 @@ export default function App() {
   const [newSelectionType, setNewSelectionType] = useState<'single' | 'multiple'>('single');
   const [newChoices, setNewChoices] = useState<string>('');
   const [newMemo, setNewMemo] = useState<string>('');
+  const [newFunctionCategoryId, setNewFunctionCategoryId] = useState<number | null>(null);
   const [editingFunctionMaster, setEditingFunctionMaster] = useState<FunctionMaster | null>(null);
+  const [isCategoryMasterListOpen, setIsCategoryMasterListOpen] = useState(false);
+  const [isCategoryMasterModalOpen, setIsCategoryMasterModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<FunctionCategory | null>(null);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryDesc, setNewCategoryDesc] = useState('');
   const [modalSearchText, setModalSearchText] = useState('');
+
+  const [notification, setNotification] = useState<string | null>(null);
+
+  const showError = (message: string) => {
+    setNotification(message);
+    setTimeout(() => setNotification(null), 5000);
+  };
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -101,10 +126,13 @@ export default function App() {
   });
 
   const fetchFacilities = () =>
-    fetch('http://192.168.174.29:8001/facilities')
+    fetch(`${apiBase}/facilities`)
       .then((res) => res.json())
       .then((data) => setFacilities(data.map(normalizeFacility)))
-      .catch((err) => console.error('施設情報取得エラー:', err));
+      .catch((err) => {
+        console.error('施設情報取得エラー:', err);
+        showError('施設情報の取得に失敗しました');
+      });
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -112,7 +140,30 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    fetch('http://192.168.174.29:8001/functions')
+    fetch(`${apiBase}/function-categories`)
+      .then((res) => res.json())
+      .then((data) => {
+        setAllCategories(data);
+        let order = data.map((c: FunctionCategory) => c.id);
+        const saved = getCookie('categoryOrder');
+        if (saved) {
+          const parsed = saved
+            .split(',')
+            .map((v) => parseInt(v))
+            .filter((v) => data.some((c: FunctionCategory) => c.id === v));
+          const missing = data
+            .map((c: FunctionCategory) => c.id)
+            .filter((id: number) => !parsed.includes(id));
+          order = [...parsed, ...missing];
+        }
+        setCategoryOrder(order);
+        setCookie('categoryOrder', order.join(','));
+      })
+      .catch((err) => {
+        console.error('カテゴリ取得エラー:', err);
+        showError('カテゴリの取得に失敗しました');
+      });
+    fetch(`${apiBase}/functions`)
       .then(res => res.json())
       .then(data => {
         setAllFunctions(data);
@@ -161,15 +212,35 @@ export default function App() {
         setVisibleColumns(newColumns);
         setCookie('visibleColumns', JSON.stringify(newColumns));
       })
-      .catch(err => console.error('機能マスタ取得エラー:', err));
+      .catch(err => {
+        console.error('機能マスタ取得エラー:', err);
+        showError('機能マスタの取得に失敗しました');
+      });
   }, []);
 
   const refreshData = () => {
     Promise.all([
-      fetch('http://192.168.174.29:8001/functions').then((res) => res.json()),
-      fetch('http://192.168.174.29:8001/facilities').then((res) => res.json()),
+      fetch(`${apiBase}/function-categories`).then((res) => res.json()),
+      fetch(`${apiBase}/functions`).then((res) => res.json()),
+      fetch(`${apiBase}/facilities`).then((res) => res.json()),
     ])
-      .then(([funcData, facData]) => {
+      .then(([catData, funcData, facData]) => {
+        setAllCategories(catData);
+        let catOrder = catData.map((c: FunctionCategory) => c.id);
+        const savedCat = getCookie('categoryOrder');
+        if (savedCat) {
+          const parsed = savedCat
+            .split(',')
+            .map((v) => parseInt(v))
+            .filter((v) => catData.some((c: FunctionCategory) => c.id === v));
+          const missing = catData
+            .map((c: FunctionCategory) => c.id)
+            .filter((id: number) => !parsed.includes(id));
+          catOrder = [...parsed, ...missing];
+        }
+        setCategoryOrder(catOrder);
+        setCookie('categoryOrder', catOrder.join(','));
+
         setAllFunctions(funcData);
         setFacilities(facData.map(normalizeFacility));
         let order = funcData.map((f: FunctionMaster) => f.id);
@@ -204,7 +275,10 @@ export default function App() {
         setVisibleColumns(cols);
         setCookie('visibleColumns', JSON.stringify(cols));
       })
-      .catch((err) => console.error('再取得エラー:', err));
+      .catch((err) => {
+        console.error('再取得エラー:', err);
+        showError('データの再取得に失敗しました');
+      });
   };
 
   const columns = [
@@ -305,12 +379,12 @@ export default function App() {
 
     const request =
       editingFacility.id === 0
-        ? fetch('http://192.168.174.29:8001/facilities', {
+        ? fetch(`${apiBase}/facilities`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
           })
-        : fetch(`http://192.168.174.29:8001/facilities/${editingFacility.id}`, {
+        : fetch(`${apiBase}/facilities/${editingFacility.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
@@ -323,13 +397,16 @@ export default function App() {
         setEditingFacility(null);
         fetchFacilities();
       })
-      .catch((err) => console.error('保存エラー:', err));
+      .catch((err) => {
+        console.error('保存エラー:', err);
+        showError('保存に失敗しました');
+      });
   };
 
   const handleDeleteFacility = () => {
     if (!editingFacility || editingFacility.id === 0) return;
     if (!window.confirm('削除してよろしいですか？')) return;
-    fetch(`http://192.168.174.29:8001/facilities/${editingFacility.id}`, {
+    fetch(`${apiBase}/facilities/${editingFacility.id}`, {
       method: 'DELETE',
     })
       .then((res) => res.json())
@@ -338,7 +415,10 @@ export default function App() {
         setEditingFacility(null);
         fetchFacilities();
       })
-      .catch((err) => console.error('削除エラー:', err));
+      .catch((err) => {
+        console.error('削除エラー:', err);
+        showError('削除に失敗しました');
+      });
   };
 
 
@@ -352,7 +432,7 @@ export default function App() {
 
     const request =
       editingEntry.id === 0
-        ? fetch('http://192.168.174.29:8001/facility-function-entries', {
+        ? fetch(`${apiBase}/facility-function-entries`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -362,7 +442,7 @@ export default function App() {
             }),
           })
         : fetch(
-            `http://192.168.174.29:8001/facility-function-entries/${editingEntry.id}`,
+            `${apiBase}/facility-function-entries/${editingEntry.id}`,
             {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
@@ -376,7 +456,10 @@ export default function App() {
         setIsFunctionModalOpen(false);
         fetchFacilities();
       })
-      .catch((err) => console.error('保存エラー:', err));
+      .catch((err) => {
+        console.error('保存エラー:', err);
+        showError('保存に失敗しました');
+      });
   };
 
   const openNewFunctionMasterModal = () => {
@@ -385,6 +468,7 @@ export default function App() {
     setNewSelectionType('single');
     setNewChoices('');
     setNewMemo('');
+    setNewFunctionCategoryId(categoryOrder[0] ?? null);
     setIsFunctionMasterModalOpen(true);
   };
 
@@ -394,6 +478,7 @@ export default function App() {
     setNewSelectionType(func.selection_type || 'single');
     setNewChoices((func.choices || []).join('\n'));
     setNewMemo(func.memo || '');
+    setNewFunctionCategoryId(func.category_id ?? null);
     setIsFunctionMasterModalOpen(true);
   };
 
@@ -406,10 +491,11 @@ export default function App() {
         .map((c) => c.trim())
         .filter((c) => c),
       memo: newMemo || undefined,
+      category_id: newFunctionCategoryId || undefined,
     };
     const url = editingFunctionMaster
-      ? `http://192.168.174.29:8001/functions/${editingFunctionMaster.id}`
-      : 'http://192.168.174.29:8001/functions';
+      ? `${apiBase}/functions/${editingFunctionMaster.id}`
+      : `${apiBase}/functions`;
     const method = editingFunctionMaster ? 'PUT' : 'POST';
     fetch(url, {
       method,
@@ -426,17 +512,75 @@ export default function App() {
         setNewMemo('');
         refreshData();
       })
-      .catch((err) => console.error('保存エラー:', err));
+      .catch((err) => {
+        console.error('保存エラー:', err);
+        showError('保存に失敗しました');
+      });
   };
 
   const handleDeleteFunctionMaster = (id: number) => {
     if (!window.confirm('削除してよろしいですか？')) return;
-    fetch(`http://192.168.174.29:8001/functions/${id}`, { method: 'DELETE' })
+    fetch(`${apiBase}/functions/${id}`, { method: 'DELETE' })
       .then((res) => res.json())
       .then(() => {
         refreshData();
       })
-      .catch((err) => console.error('削除エラー:', err));
+      .catch((err) => {
+        console.error('削除エラー:', err);
+        showError('削除に失敗しました');
+      });
+  };
+
+  const openNewCategoryModal = () => {
+    setEditingCategory(null);
+    setNewCategoryName('');
+    setNewCategoryDesc('');
+    setIsCategoryMasterModalOpen(true);
+  };
+
+  const openEditCategoryModal = (cat: FunctionCategory) => {
+    setEditingCategory(cat);
+    setNewCategoryName(cat.name);
+    setNewCategoryDesc(cat.description || '');
+    setIsCategoryMasterModalOpen(true);
+  };
+
+  const handleSaveCategory = () => {
+    const payload = { name: newCategoryName, description: newCategoryDesc || undefined };
+    const url = editingCategory
+      ? `${apiBase}/function-categories/${editingCategory.id}`
+      : `${apiBase}/function-categories`;
+    const method = editingCategory ? 'PUT' : 'POST';
+    fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then((res) => res.json())
+      .then(() => {
+        setIsCategoryMasterModalOpen(false);
+        setEditingCategory(null);
+        setNewCategoryName('');
+        setNewCategoryDesc('');
+        refreshData();
+      })
+      .catch((err) => {
+        console.error('保存エラー:', err);
+        showError('保存に失敗しました');
+      });
+  };
+
+  const handleDeleteCategory = (id: number) => {
+    if (!window.confirm('削除してよろしいですか？')) return;
+    fetch(`${apiBase}/function-categories/${id}`, { method: 'DELETE' })
+      .then((res) => res.json())
+      .then(() => {
+        refreshData();
+      })
+      .catch((err) => {
+        console.error('削除エラー:', err);
+        showError('削除に失敗しました');
+      });
   };
 
   const handleExportCsv = () => {
@@ -545,6 +689,11 @@ export default function App() {
 
   return (
     <div className="bg-gray-100 h-screen p-0 overflow-hidden flex flex-col">
+      {notification && (
+        <div className="bg-red-500 text-white px-4 py-2 text-sm text-center">
+          {notification}
+        </div>
+      )}
       <div className="flex items-center mb-2 p-2 bg-gray-100 flex-none sticky top-0 z-30">
         <h1 className="text-2xl font-bold">医療機関機能一覧</h1>
         <div className="relative ml-4">
@@ -595,6 +744,15 @@ export default function App() {
                 }}
               >
                 機能マスタ保守
+              </button>
+              <button
+                className="px-4 py-2 hover:bg-gray-100 text-left"
+                onClick={() => {
+                  setIsCategoryMasterListOpen(true);
+                  setIsMenuOpen(false);
+                }}
+              >
+                カテゴリマスタ保守
               </button>
               <button
                 className="px-4 py-2 hover:bg-gray-100 text-left"
@@ -803,6 +961,127 @@ export default function App() {
                 </Dialog.Panel>
               </Transition.Child>
             </div>
+          </div>
+        </Dialog>
+      </Transition>
+
+      {/* カテゴリマスタ一覧モーダル */}
+      <Transition appear show={isCategoryMasterListOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-10" onClose={() => setIsCategoryMasterListOpen(false)}>
+          <div className="fixed inset-0 bg-black bg-opacity-25" />
+          <div className="fixed inset-0 overflow-y-auto flex items-center justify-center p-4">
+            <Dialog.Panel className="w-full max-w-md bg-white rounded p-6 shadow">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold">カテゴリマスタ保守</h3>
+                <button
+                  className="px-2 py-1 bg-green-500 text-white rounded"
+                  onClick={openNewCategoryModal}
+                >
+                  新規作成
+                </button>
+              </div>
+              <div className="max-h-80 overflow-y-auto">
+                <table className="min-w-max border-collapse border border-gray-300 mb-4 w-full">
+                  <thead>
+                    <tr className="bg-gray-200">
+                      <th className="px-2 py-1 border">ID</th>
+                      <th className="px-2 py-1 border">名称</th>
+                      <th className="px-2 py-1 border">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {categoryOrder
+                      .map((id) => allCategories.find((c) => c.id === id))
+                      .filter((c): c is FunctionCategory => !!c)
+                      .map((cat, idx) => (
+                        <tr
+                          key={cat.id}
+                          className="hover:bg-gray-50"
+                          draggable
+                          onDragStart={() => setDragCategoryIndex(idx)}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={() => {
+                            if (dragCategoryIndex === null) return;
+                            const newOrder = [...categoryOrder];
+                            const [m] = newOrder.splice(dragCategoryIndex, 1);
+                            newOrder.splice(idx, 0, m);
+                            setCategoryOrder(newOrder);
+                            setCookie('categoryOrder', newOrder.join(','));
+                            setDragCategoryIndex(null);
+                          }}
+                        >
+                          <td className="border px-2">{cat.id}</td>
+                          <td className="border px-2">{cat.name}</td>
+                          <td className="border px-2">
+                            <button
+                              className="px-2 py-1 bg-blue-500 text-white rounded mr-2"
+                              onClick={() => openEditCategoryModal(cat)}
+                            >
+                              編集
+                            </button>
+                            <button
+                              className="px-2 py-1 bg-red-500 text-white rounded"
+                              onClick={() => handleDeleteCategory(cat.id)}
+                            >
+                              削除
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  className="px-4 py-2 bg-gray-500 text-white rounded"
+                  onClick={() => setIsCategoryMasterListOpen(false)}
+                >
+                  閉じる
+                </button>
+              </div>
+            </Dialog.Panel>
+          </div>
+        </Dialog>
+      </Transition>
+
+      {/* カテゴリマスタ追加/編集モーダル */}
+      <Transition appear show={isCategoryMasterModalOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-10" onClose={() => setIsCategoryMasterModalOpen(false)}>
+          <div className="fixed inset-0 bg-black bg-opacity-25" />
+          <div className="fixed inset-0 overflow-y-auto flex items-center justify-center p-4">
+            <Dialog.Panel className="w-full max-w-md bg-white rounded p-6 shadow">
+              <h3 className="text-lg font-bold mb-4">
+                {editingCategory ? 'カテゴリ編集' : '新規カテゴリ追加'}
+              </h3>
+              <input
+                type="text"
+                placeholder="カテゴリ名"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                className="border p-2 w-full mb-4"
+              />
+              <textarea
+                placeholder="説明"
+                value={newCategoryDesc}
+                onChange={(e) => setNewCategoryDesc(e.target.value)}
+                rows={3}
+                className="border p-2 w-full mb-4"
+              />
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setIsCategoryMasterModalOpen(false)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded mr-2"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={handleSaveCategory}
+                  className="px-4 py-2 bg-blue-500 text-white rounded"
+                >
+                  保存
+                </button>
+              </div>
+            </Dialog.Panel>
           </div>
         </Dialog>
       </Transition>
@@ -1212,6 +1491,30 @@ export default function App() {
                 rows={5}
                 className="border p-2 w-full mb-4"
               />
+
+              {/* カテゴリ選択 */}
+              <div className="mb-4">
+                <label className="mr-2">カテゴリ:</label>
+                <select
+                  className="border p-2"
+                  value={newFunctionCategoryId ?? ''}
+                  onChange={(e) =>
+                    setNewFunctionCategoryId(
+                      e.target.value ? parseInt(e.target.value) : null
+                    )
+                  }
+                >
+                  <option value="">未選択</option>
+                  {categoryOrder
+                    .map((id) => allCategories.find((c) => c.id === id))
+                    .filter((c): c is FunctionCategory => !!c)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
 
               {/* メモ */}
               <textarea
