@@ -580,7 +580,8 @@ export default function App() {
     setNewSelectionType('single');
     setNewChoices('');
     setNewMemo('');
-    setNewFunctionCategoryId(categoryOrder[0] ?? null);
+    // 新規作成時はカテゴリ未選択を初期値とする
+    setNewFunctionCategoryId(null);
     setIsFunctionMasterModalOpen(true);
   };
 
@@ -915,7 +916,7 @@ export default function App() {
                       <span>{g.label}</span>
                       <button
                         onClick={() => toggleCollapse(g.id)}
-                        className="ml-2 text-sm"
+                        className="ml-2 text-xl font-bold"
                       >
                         {collapsedGroups[g.id] ? '+' : '-'}
                       </button>
@@ -1634,7 +1635,7 @@ export default function App() {
                           <td className="border px-2">{func.id}</td>
                           <td className="border px-2">{func.name}</td>
                           <td className="border px-2">{
-                            allCategories.find((c) => c.id === func.category_id)?.name || ''
+                            allCategories.find((c) => c.id === func.category_id)?.name || '未選択'
                           }</td>
                           <td className="border px-2">
                             <button
