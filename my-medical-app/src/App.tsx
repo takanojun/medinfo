@@ -925,12 +925,9 @@ export default function App() {
                   (c) => c.group === g.id && visibleColumns[c.key]
                 );
                 if (colsInGroup.length === 0) return null;
+                const span = collapsedGroups[g.id] ? 1 : colsInGroup.length;
                 return (
-                  <th
-                    key={g.id}
-                    colSpan={colsInGroup.length}
-                    className="border px-2"
-                  >
+                  <th key={g.id} colSpan={span} className="border px-2">
                     <div className="flex items-center justify-between">
                       <span>{g.label}</span>
                       <button
@@ -945,31 +942,49 @@ export default function App() {
               })}
             </tr>
             <tr className="text-left">
-              {columns.map((col) => {
-                if (!visibleGroups[col.group]) return null;
-                if (!visibleColumns[col.key]) return null;
-                return (
+              {columnGroups.map((g) => {
+                if (!visibleGroups[g.id]) return null;
+                const colsInGroup = columns.filter(
+                  (c) => c.group === g.id && visibleColumns[c.key]
+                );
+                if (colsInGroup.length === 0) return null;
+                if (collapsedGroups[g.id]) {
+                  return (
+                    <th key={`${g.id}-collapsed`} className="py-2 px-4 border whitespace-nowrap"></th>
+                  );
+                }
+                return colsInGroup.map((col) => (
                   <th
                     key={col.key}
                     className="py-2 px-4 border cursor-pointer whitespace-nowrap"
-                    style={{ display: collapsedGroups[col.group] ? 'none' : undefined }}
                     onClick={() => handleSort(col.key)}
                   >
                     {col.label}{' '}
                     {sortKey === col.key && sortOrder !== 'none' &&
                       (sortOrder === 'asc' ? '▲' : '▼')}
                   </th>
-                );
+                ));
               })}
             </tr>
           </thead>
           <tbody>
             {sortedFacilities.map((facility) => (
               <tr key={facility.id} className="hover:bg-gray-50">
-                {columns
-                  .filter((col) => visibleGroups[col.group])
-                  .filter((col) => visibleColumns[col.key])
-                  .map((col) => {
+                {columnGroups.map((g) => {
+                  if (!visibleGroups[g.id]) return null;
+                  const colsInGroup = columns.filter(
+                    (c) => c.group === g.id && visibleColumns[c.key]
+                  );
+                  if (colsInGroup.length === 0) return null;
+                  if (collapsedGroups[g.id]) {
+                    return (
+                      <td
+                        key={`${facility.id}-${g.id}`}
+                        className="py-2 px-4 border"
+                      ></td>
+                    );
+                  }
+                  return colsInGroup.map((col) => {
                     if (col.key.startsWith('func_')) {
                       const funcId = parseInt(col.key.replace('func_', ''));
                       const fEntry = facility.functions.find(
@@ -979,7 +994,6 @@ export default function App() {
                         <td
                           key={col.key}
                           className="py-2 px-4 border whitespace-nowrap tooltip-container"
-                          style={{ display: collapsedGroups[col.group] ? 'none' : undefined }}
                           data-tooltip={
                             allFunctions.find((f) => f.id === funcId)?.memo ||
                             allFunctions.find((f) => f.id === funcId)?.name ||
@@ -1007,7 +1021,6 @@ export default function App() {
                         <td
                           key={col.key}
                           className="py-2 px-4 border whitespace-nowrap"
-                          style={{ display: collapsedGroups[col.group] ? 'none' : undefined }}
                           onContextMenu={(e) => handleFacilityCellRightClick(e, facility)}
                         >
                           {Array.isArray(val) ? (
@@ -1044,7 +1057,8 @@ export default function App() {
                         </td>
                       ) as React.ReactNode;
                     }
-                  })}
+                  });
+                })}
               </tr>
             ))}
           </tbody>
