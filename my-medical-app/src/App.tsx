@@ -97,6 +97,11 @@ export default function App() {
   const [newCategoryDesc, setNewCategoryDesc] = useState('');
   const [modalSearchText, setModalSearchText] = useState('');
 
+  // 機能マスタ・カテゴリマスタ用検索/フィルタ
+  const [functionListSearchText, setFunctionListSearchText] = useState('');
+  const [functionCategoryFilter, setFunctionCategoryFilter] = useState<number | ''>('');
+  const [categoryListSearchText, setCategoryListSearchText] = useState('');
+
   const [notification, setNotification] = useState<string | null>(null);
 
   const showError = (message: string) => {
@@ -1147,6 +1152,15 @@ export default function App() {
                   新規作成
                 </button>
               </div>
+              <div className="mb-2">
+                <input
+                  type="text"
+                  placeholder="検索"
+                  value={categoryListSearchText}
+                  onChange={(e) => setCategoryListSearchText(e.target.value)}
+                  className="border p-1 w-full"
+                />
+              </div>
               <div className="max-h-80 overflow-y-auto">
                 <table className="min-w-max border-collapse border border-gray-300 mb-4 w-full">
                   <thead>
@@ -1160,6 +1174,11 @@ export default function App() {
                     {categoryOrder
                       .map((id) => allCategories.find((c) => c.id === id))
                       .filter((c): c is FunctionCategory => !!c)
+                      .filter((c) =>
+                        `${c.id}${c.name}${c.description || ''}`
+                          .toLowerCase()
+                          .includes(categoryListSearchText.toLowerCase())
+                      )
                       .map((cat, idx) => (
                         <tr
                           key={cat.id}
@@ -1546,12 +1565,38 @@ export default function App() {
                   新規作成
                 </button>
               </div>
+              <div className="flex items-center mb-2 gap-2">
+                <input
+                  type="text"
+                  placeholder="検索"
+                  value={functionListSearchText}
+                  onChange={(e) => setFunctionListSearchText(e.target.value)}
+                  className="border p-1 flex-grow"
+                />
+                <select
+                  className="border p-1"
+                  value={functionCategoryFilter}
+                  onChange={(e) =>
+                    setFunctionCategoryFilter(
+                      e.target.value ? parseInt(e.target.value) : ''
+                    )
+                  }
+                >
+                  <option value="">全て</option>
+                  {allCategories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="max-h-80 overflow-y-auto">
                 <table className="min-w-max border-collapse border border-gray-300 mb-4 w-full">
                   <thead>
                     <tr className="bg-gray-200">
                       <th className="px-2 py-1 border">ID</th>
                       <th className="px-2 py-1 border">名称</th>
+                      <th className="px-2 py-1 border">カテゴリ</th>
                       <th className="px-2 py-1 border">操作</th>
                     </tr>
                   </thead>
@@ -1559,6 +1604,16 @@ export default function App() {
                     {functionOrder
                       .map((id: number) => allFunctions.find((f) => f.id === id))
                       .filter((f): f is FunctionMaster => !!f)
+                      .filter((f) =>
+                        `${f.id}${f.name}${f.memo || ''}`
+                          .toLowerCase()
+                          .includes(functionListSearchText.toLowerCase())
+                      )
+                      .filter(
+                        (f) =>
+                          functionCategoryFilter === '' ||
+                          f.category_id === functionCategoryFilter
+                      )
                       .map((func, idx) => (
                         <tr
                           key={func.id}
@@ -1578,6 +1633,9 @@ export default function App() {
                         >
                           <td className="border px-2">{func.id}</td>
                           <td className="border px-2">{func.name}</td>
+                          <td className="border px-2">{
+                            allCategories.find((c) => c.id === func.category_id)?.name || ''
+                          }</td>
                           <td className="border px-2">
                             <button
                               className="px-2 py-1 bg-blue-500 text-white rounded mr-2"
