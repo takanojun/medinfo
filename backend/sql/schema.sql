@@ -17,7 +17,8 @@ CREATE TABLE medical_facility (
 CREATE TABLE function_categories (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
-    description TEXT
+    description TEXT,
+    is_deleted BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE functions (

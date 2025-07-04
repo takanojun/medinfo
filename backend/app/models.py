@@ -9,6 +9,7 @@ class FunctionCategory(Base):
     id = Column(Integer, primary_key=True)
     name = Column(Text, nullable=False)
     description = Column(Text)
+    is_deleted = Column(Boolean, default=False)
 
     functions = relationship("Function", back_populates="category")
 

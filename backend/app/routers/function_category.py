@@ -15,8 +15,16 @@ def get_db():
 
 
 @router.get("", response_model=List[schemas.FunctionCategoryBase])
-def read_categories(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return db.query(models.FunctionCategory).offset(skip).limit(limit).all()
+def read_categories(
+    skip: int = 0,
+    limit: int = 100,
+    include_deleted: bool = False,
+    db: Session = Depends(get_db),
+):
+    query = db.query(models.FunctionCategory)
+    if not include_deleted:
+        query = query.filter(models.FunctionCategory.is_deleted == False)
+    return query.offset(skip).limit(limit).all()
 
 
 @router.post("", response_model=schemas.FunctionCategoryBase)
@@ -42,9 +50,28 @@ def update_category(category_id: int, update_data: schemas.FunctionCategoryUpdat
 
 @router.delete("/{category_id}", response_model=dict)
 def delete_category(category_id: int, db: Session = Depends(get_db)):
-    db_cat = db.query(models.FunctionCategory).filter(models.FunctionCategory.id == category_id).first()
+    db_cat = (
+        db.query(models.FunctionCategory)
+        .filter(models.FunctionCategory.id == category_id, models.FunctionCategory.is_deleted == False)
+        .first()
+    )
     if not db_cat:
         raise HTTPException(status_code=404, detail="Category not found")
-    db.delete(db_cat)
+    db_cat.is_deleted = True
     db.commit()
     return {"message": "Category deleted"}
+
+
+@router.put("/{category_id}/restore", response_model=schemas.FunctionCategoryBase)
+def restore_category(category_id: int, db: Session = Depends(get_db)):
+    db_cat = (
+        db.query(models.FunctionCategory)
+        .filter(models.FunctionCategory.id == category_id, models.FunctionCategory.is_deleted == True)
+        .first()
+    )
+    if not db_cat:
+        raise HTTPException(status_code=404, detail="Category not found")
+    db_cat.is_deleted = False
+    db.commit()
+    db.refresh(db_cat)
+    return db_cat
