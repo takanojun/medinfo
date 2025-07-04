@@ -18,14 +18,16 @@ def get_db():
 
 # 機能マスタ一覧取得（GET /functions）
 @router.get("", response_model=List[schemas.FunctionBase])
-def read_functions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    functions = (
-        db.query(models.Function)
-        .filter(models.Function.is_deleted == False)
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
+def read_functions(
+    skip: int = 0,
+    limit: int = 100,
+    include_deleted: bool = False,
+    db: Session = Depends(get_db),
+):
+    query = db.query(models.Function)
+    if not include_deleted:
+        query = query.filter(models.Function.is_deleted == False)
+    functions = query.offset(skip).limit(limit).all()
     return functions
 
 # 機能マスタ新規作成（POST /functions）
@@ -81,3 +83,18 @@ def delete_function(function_id: int, db: Session = Depends(get_db)):
     db_function.is_deleted = True
     db.commit()
     return {"message": "Function deleted successfully"}
+
+
+@router.put("/{function_id}/restore", response_model=schemas.FunctionBase)
+def restore_function(function_id: int, db: Session = Depends(get_db)):
+    db_function = (
+        db.query(models.Function)
+        .filter(models.Function.id == function_id, models.Function.is_deleted == True)
+        .first()
+    )
+    if not db_function:
+        raise HTTPException(status_code=404, detail="Function not found")
+    db_function.is_deleted = False
+    db.commit()
+    db.refresh(db_function)
+    return db_function

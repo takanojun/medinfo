@@ -10,6 +10,7 @@ class FunctionCategoryBase(BaseModel):
     id: int
     name: str
     description: Optional[str]
+    is_deleted: bool
 
     class Config:
         from_attributes = True
@@ -25,6 +26,7 @@ class FunctionBase(BaseModel):
     selection_type: str
     choices: List[str]
     category_id: Optional[int]
+    is_deleted: bool
 
     class Config:
         from_attributes = True

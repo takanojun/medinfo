@@ -55,12 +55,14 @@ interface FunctionMaster {
   selection_type?: 'single' | 'multiple';
   choices?: string[];
   category_id?: number;
+  is_deleted?: boolean;
 }
 
 interface FunctionCategory {
   id: number;
   name: string;
   description?: string;
+  is_deleted?: boolean;
 }
 
 export default function App() {
@@ -103,6 +105,8 @@ export default function App() {
   const [functionListSearchText, setFunctionListSearchText] = useState('');
   const [functionCategoryFilter, setFunctionCategoryFilter] = useState<number | ''>('');
   const [categoryListSearchText, setCategoryListSearchText] = useState('');
+  const [showDeletedFunctions, setShowDeletedFunctions] = useState(false);
+  const [showDeletedCategories, setShowDeletedCategories] = useState(false);
 
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -150,8 +154,8 @@ export default function App() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`${apiBase}/function-categories`).then((res) => res.json()),
-      fetch(`${apiBase}/functions`).then((res) => res.json()),
+      fetch(`${apiBase}/function-categories?include_deleted=true`).then((res) => res.json()),
+      fetch(`${apiBase}/functions?include_deleted=true`).then((res) => res.json()),
     ])
       .then(([catData, funcData]) => {
         setAllCategories(catData);
@@ -285,8 +289,8 @@ export default function App() {
 
   const refreshData = () => {
     Promise.all([
-      fetch(`${apiBase}/function-categories`).then((res) => res.json()),
-      fetch(`${apiBase}/functions`).then((res) => res.json()),
+      fetch(`${apiBase}/function-categories?include_deleted=true`).then((res) => res.json()),
+      fetch(`${apiBase}/functions?include_deleted=true`).then((res) => res.json()),
       fetch(`${apiBase}/facilities`).then((res) => res.json()),
     ])
       .then(([catData, funcData, facData]) => {
@@ -695,6 +699,17 @@ export default function App() {
       });
   };
 
+  const handleRestoreFunctionMaster = (id: number) => {
+    if (!window.confirm('復元してよろしいですか？')) return;
+    fetch(`${apiBase}/functions/${id}/restore`, { method: 'PUT' })
+      .then((res) => res.json())
+      .then(() => refreshData())
+      .catch((err) => {
+        console.error('復元エラー:', err);
+        showError('復元に失敗しました');
+      });
+  };
+
   const openNewCategoryModal = () => {
     setEditingCategory(null);
     setNewCategoryName('');
@@ -744,6 +759,17 @@ export default function App() {
       .catch((err) => {
         console.error('削除エラー:', err);
         showError('削除に失敗しました');
+      });
+  };
+
+  const handleRestoreCategory = (id: number) => {
+    if (!window.confirm('復元してよろしいですか？')) return;
+    fetch(`${apiBase}/function-categories/${id}/restore`, { method: 'PUT' })
+      .then((res) => res.json())
+      .then(() => refreshData())
+      .catch((err) => {
+        console.error('復元エラー:', err);
+        showError('復元に失敗しました');
       });
   };
 
@@ -1225,7 +1251,7 @@ export default function App() {
                   新規作成
                 </button>
               </div>
-              <div className="mb-2">
+              <div className="mb-2 space-y-2">
                 <input
                   type="text"
                   placeholder="検索"
@@ -1233,6 +1259,22 @@ export default function App() {
                   onChange={(e) => setCategoryListSearchText(e.target.value)}
                   className="border p-1 w-full"
                 />
+                <label className="flex items-center space-x-2">
+                  <Switch
+                    checked={showDeletedCategories}
+                    onChange={setShowDeletedCategories}
+                    className={`${
+                      showDeletedCategories ? 'bg-blue-500' : 'bg-gray-300'
+                    } relative inline-flex h-6 w-11 items-center rounded-full`}
+                  >
+                    <span
+                      className={`${
+                        showDeletedCategories ? 'translate-x-6' : 'translate-x-1'
+                      } inline-block h-4 w-4 transform rounded-full bg-white transition`}
+                    />
+                  </Switch>
+                  <span>削除済みを表示</span>
+                </label>
               </div>
               <div className="max-h-80 overflow-y-auto">
                 <table className="min-w-max border-collapse border border-gray-300 mb-4 w-full">
@@ -1247,6 +1289,7 @@ export default function App() {
                     {categoryMasterOrder
                       .map((id) => allCategories.find((c) => c.id === id))
                       .filter((c): c is FunctionCategory => !!c)
+                      .filter((c) => showDeletedCategories || !c.is_deleted)
                       .filter((c) =>
                         `${c.id}${c.name}${c.description || ''}`
                           .toLowerCase()
@@ -1279,10 +1322,16 @@ export default function App() {
                               編集
                             </button>
                             <button
-                              className="px-2 py-1 bg-red-500 text-white rounded"
+                              className={`px-2 py-1 bg-red-500 text-white rounded mr-2 ${cat.is_deleted ? 'invisible' : ''}`}
                               onClick={() => handleDeleteCategory(cat.id)}
                             >
                               削除
+                            </button>
+                            <button
+                              className={`px-2 py-1 bg-green-500 text-white rounded ${cat.is_deleted ? '' : 'invisible'}`}
+                              onClick={() => handleRestoreCategory(cat.id)}
+                            >
+                              復元
                             </button>
                           </td>
                         </tr>
@@ -1662,6 +1711,22 @@ export default function App() {
                     </option>
                   ))}
                 </select>
+                <label className="flex items-center space-x-2">
+                  <Switch
+                    checked={showDeletedFunctions}
+                    onChange={setShowDeletedFunctions}
+                    className={`${
+                      showDeletedFunctions ? 'bg-blue-500' : 'bg-gray-300'
+                    } relative inline-flex h-6 w-11 items-center rounded-full`}
+                  >
+                    <span
+                      className={`${
+                        showDeletedFunctions ? 'translate-x-6' : 'translate-x-1'
+                      } inline-block h-4 w-4 transform rounded-full bg-white transition`}
+                    />
+                  </Switch>
+                  <span>削除済みを表示</span>
+                </label>
               </div>
               <div className="max-h-80 overflow-y-auto">
                 <table className="min-w-max border-collapse border border-gray-300 mb-4 w-full">
@@ -1677,6 +1742,7 @@ export default function App() {
                     {functionOrder
                       .map((id: number) => allFunctions.find((f) => f.id === id))
                       .filter((f): f is FunctionMaster => !!f)
+                      .filter((f) => showDeletedFunctions || !f.is_deleted)
                       .filter((f) =>
                         `${f.id}${f.name}${f.memo || ''}`
                           .toLowerCase()
@@ -1771,10 +1837,16 @@ export default function App() {
                               編集
                             </button>
                             <button
-                              className="px-2 py-1 bg-red-500 text-white rounded"
+                              className={`px-2 py-1 bg-red-500 text-white rounded mr-2 ${func.is_deleted ? 'invisible' : ''}`}
                               onClick={() => handleDeleteFunctionMaster(func.id)}
                             >
                               削除
+                            </button>
+                            <button
+                              className={`px-2 py-1 bg-green-500 text-white rounded ${func.is_deleted ? '' : 'invisible'}`}
+                              onClick={() => handleRestoreFunctionMaster(func.id)}
+                            >
+                              復元
                             </button>
                           </td>
                         </tr>
