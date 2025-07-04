@@ -410,14 +410,17 @@ export default function App() {
   };
 
   const hasUncategorizedColumn = allFunctions.some(
-    (f) => f.category_id === null,
+    (f) => !f.is_deleted && f.category_id === null,
   );
 
   const columnGroups = [
     { id: 'facility', label: '医療機関情報' },
     ...categoryOrder
       .map((id) => allCategories.find((c) => c.id === id))
-      .filter((c): c is FunctionCategory => !!c)
+      .filter(
+        (c): c is FunctionCategory =>
+          !!c && (showDeletedCategories || !c.is_deleted)
+      )
       .map((cat) => ({ id: `cat_${cat.id}`, label: cat.name })),
     ...(hasUncategorizedColumn ? [{ id: 'cat_null', label: '未選択' }] : []),
   ];
@@ -435,7 +438,9 @@ export default function App() {
     { key: 'remarks', label: '備考', group: 'facility' },
     ...functionOrder
       .map((id: number) => allFunctions.find((f) => f.id === id))
-      .filter((f): f is FunctionMaster => !!f)
+      .filter(
+        (f): f is FunctionMaster => !!f && (showDeletedFunctions || !f.is_deleted)
+      )
       .map((func) => ({
         key: `func_${func.id}`,
         label: func.name,
