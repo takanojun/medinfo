@@ -71,6 +71,7 @@ export default function App() {
   const [functionOrder, setFunctionOrder] = useState<number[]>([]);
   const [dragCategoryIndex, setDragCategoryIndex] = useState<number | null>(null);
   const [dragCategoryForFuncList, setDragCategoryForFuncList] = useState<number | null>(null);
+  const [dragFunctionId, setDragFunctionId] = useState<number | null>(null);
 
   const [searchText, setSearchText] = useState('');
   const [sortKey, setSortKey] = useState<string>('id');
@@ -1649,7 +1650,31 @@ export default function App() {
                           f.category_id === functionCategoryFilter
                       )
                       .map((func) => (
-                        <tr key={func.id} className="hover:bg-gray-50">
+                        <tr
+                          key={func.id}
+                          className="hover:bg-gray-50"
+                          draggable
+                          onDragStart={() => {
+                            setDragFunctionId(func.id);
+                            setDragCategoryForFuncList(null);
+                          }}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={() => {
+                            if (dragFunctionId === null || dragFunctionId === func.id)
+                              return;
+                            const fromFunc = allFunctions.find((f) => f.id === dragFunctionId);
+                            if (!fromFunc || fromFunc.category_id !== func.category_id) return;
+                            const fromIdx = functionOrder.indexOf(dragFunctionId);
+                            const toIdx = functionOrder.indexOf(func.id);
+                            if (fromIdx === -1 || toIdx === -1) return;
+                            const newOrder = [...functionOrder];
+                            newOrder.splice(fromIdx, 1);
+                            newOrder.splice(toIdx, 0, dragFunctionId);
+                            setFunctionOrder(newOrder);
+                            setCookie('functionOrder', newOrder.join(','));
+                            setDragFunctionId(null);
+                          }}
+                        >
                           <td className="border px-2">{func.id}</td>
                           <td
                             className="border px-2 cursor-move bg-gray-50"
@@ -1668,9 +1693,7 @@ export default function App() {
                                 dragCategoryForFuncList === func.category_id
                               )
                                 return;
-                              const fromIdx = categoryOrder.indexOf(
-                                dragCategoryForFuncList!,
-                              );
+                              const fromIdx = categoryOrder.indexOf(dragCategoryForFuncList);
                               const toIdx = categoryOrder.indexOf(func.category_id!);
                               if (fromIdx === -1 || toIdx === -1) return;
                               const newOrder = [...categoryOrder];
@@ -1679,14 +1702,12 @@ export default function App() {
                               setCategoryOrder(newOrder);
                               setCookie('categoryOrder', newOrder.join(','));
 
-                              // 関連する機能順も更新
                               const sorted = [
                                 ...newOrder.flatMap((cid) =>
                                   functionOrder
                                     .map((id) => allFunctions.find((f) => f.id === id))
                                     .filter(
-                                      (f): f is FunctionMaster =>
-                                        !!f && f.category_id === cid,
+                                      (f): f is FunctionMaster => !!f && f.category_id === cid,
                                     )
                                     .map((f) => f.id),
                                 ),
@@ -1700,10 +1721,8 @@ export default function App() {
                               setDragCategoryForFuncList(null);
                             }}
                           >
-                            {
-                              allCategories.find((c) => c.id === func.category_id)
-                                ?.name || '未選択'
-                            }
+                            {allCategories.find((c) => c.id === func.category_id)?.name ||
+                              '未選択'}
                           </td>
                           <td className="border px-2">{func.name}</td>
                           <td className="border px-2">
