@@ -692,13 +692,36 @@ export default function App() {
         }
         return data;
       })
-      .then(() => {
+      .then((saved) => {
+        const prevCat = editingFunctionMaster?.category_id ?? null;
+        const wasEditing = !!editingFunctionMaster;
         setIsFunctionMasterModalOpen(false);
         setEditingFunctionMaster(null);
         setNewFunctionName('');
         setNewSelectionType('single');
         setNewChoices('');
         setNewMemo('');
+
+        const reorderNeeded = !wasEditing || prevCat !== saved.category_id;
+        if (reorderNeeded) {
+          // 既存の並び順から今回保存した機能のIDを一旦除外
+          const order = functionOrder.filter((id) => id !== saved.id);
+          const targetCat = saved.category_id ?? null;
+          // 同一カテゴリ内の最後の位置を取得
+          let insertPos = order.length;
+          for (let i = order.length - 1; i >= 0; i--) {
+            const f = allFunctions.find((fn) => fn.id === order[i]);
+            const catId = f?.category_id ?? null;
+            if (catId === targetCat) {
+              insertPos = i + 1;
+              break;
+            }
+          }
+          order.splice(insertPos, 0, saved.id);
+          setFunctionOrder(order);
+          setCookie('functionOrder', order.join(','));
+        }
+
         refreshData();
       })
       .catch((err) => {
