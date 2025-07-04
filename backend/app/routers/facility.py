@@ -33,7 +33,19 @@ def read_facilities(skip: int = 0, limit: int | None = None, db: Session = Depen
     if limit is not None:
         query = query.limit(limit)
     facilities = query.all()
-    return facilities
+
+    # 削除済み機能を除外したリストを作成
+    results: List[schemas.MedicalFacility] = []
+    for fac in facilities:
+        fac_data = schemas.MedicalFacility.from_orm(fac)
+        fac_data.functions = [
+            schemas.FacilityFunctionEntryBase.from_orm(entry)
+            for entry in fac.functions
+            if entry.function and not entry.function.is_deleted
+        ]
+        results.append(fac_data)
+
+    return results
 
 # 医療機関を新規登録（POST /facilities）
 @router.post("", response_model=schemas.MedicalFacility)
