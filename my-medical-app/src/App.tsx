@@ -68,6 +68,7 @@ export default function App() {
   const [allFunctions, setAllFunctions] = useState<FunctionMaster[]>([]);
   const [allCategories, setAllCategories] = useState<FunctionCategory[]>([]);
   const [categoryOrder, setCategoryOrder] = useState<number[]>([]);
+  const [categoryMasterOrder, setCategoryMasterOrder] = useState<number[]>([]);
   const [functionOrder, setFunctionOrder] = useState<number[]>([]);
   const [dragCategoryIndex, setDragCategoryIndex] = useState<number | null>(null);
   const [dragCategoryForFuncList, setDragCategoryForFuncList] = useState<number | null>(null);
@@ -154,27 +155,42 @@ export default function App() {
     ])
       .then(([catData, funcData]) => {
         setAllCategories(catData);
-        let order = catData.map((c: FunctionCategory) => c.id);
-        const saved = getCookie('categoryOrder');
-        if (saved) {
-          const parsed = saved
+        let funcCatOrder = catData.map((c: FunctionCategory) => c.id);
+        const savedFunc = getCookie('functionCategoryOrder');
+        if (savedFunc) {
+          const parsed = savedFunc
             .split(',')
             .map((v) => parseInt(v))
             .filter((v) => catData.some((c: FunctionCategory) => c.id === v));
           const missing = catData
             .map((c: FunctionCategory) => c.id)
             .filter((id: number) => !parsed.includes(id));
-          order = [...parsed, ...missing];
+          funcCatOrder = [...parsed, ...missing];
         }
-        setCategoryOrder(order);
-        setCookie('categoryOrder', order.join(','));
+        setCategoryOrder(funcCatOrder);
+        setCookie('functionCategoryOrder', funcCatOrder.join(','));
+
+        let catMasterOrder = catData.map((c: FunctionCategory) => c.id);
+        const savedMaster = getCookie('categoryMasterOrder');
+        if (savedMaster) {
+          const parsed = savedMaster
+            .split(',')
+            .map((v) => parseInt(v))
+            .filter((v) => catData.some((c: FunctionCategory) => c.id === v));
+          const missing = catData
+            .map((c: FunctionCategory) => c.id)
+            .filter((id: number) => !parsed.includes(id));
+          catMasterOrder = [...parsed, ...missing];
+        }
+        setCategoryMasterOrder(catMasterOrder);
+        setCookie('categoryMasterOrder', catMasterOrder.join(','));
 
         const hasUncategorized = funcData.some(
           (f: FunctionMaster) => f.category_id === null,
         );
 
         const g: Record<string, boolean> = { facility: true };
-        order.forEach((id: number) => {
+        funcCatOrder.forEach((id: number) => {
           g[`cat_${id}`] = true;
         });
         if (hasUncategorized) {
@@ -195,7 +211,7 @@ export default function App() {
         setCookie('visibleColumnGroups', JSON.stringify(g));
 
         const c: Record<string, boolean> = { facility: false };
-        order.forEach((id: number) => {
+        funcCatOrder.forEach((id: number) => {
           c[`cat_${id}`] = false;
         });
         if (hasUncategorized) {
@@ -275,25 +291,40 @@ export default function App() {
     ])
       .then(([catData, funcData, facData]) => {
         setAllCategories(catData);
-        let catOrder = catData.map((c: FunctionCategory) => c.id);
-        const savedCat = getCookie('categoryOrder');
-        if (savedCat) {
-          const parsed = savedCat
+        let funcCatOrder = catData.map((c: FunctionCategory) => c.id);
+        const savedFunc = getCookie('functionCategoryOrder');
+        if (savedFunc) {
+          const parsed = savedFunc
             .split(',')
             .map((v) => parseInt(v))
             .filter((v) => catData.some((c: FunctionCategory) => c.id === v));
           const missing = catData
             .map((c: FunctionCategory) => c.id)
             .filter((id: number) => !parsed.includes(id));
-          catOrder = [...parsed, ...missing];
+          funcCatOrder = [...parsed, ...missing];
         }
-        setCategoryOrder(catOrder);
-        setCookie('categoryOrder', catOrder.join(','));
+        setCategoryOrder(funcCatOrder);
+        setCookie('functionCategoryOrder', funcCatOrder.join(','));
+
+        let catMasterOrder = catData.map((c: FunctionCategory) => c.id);
+        const savedMaster = getCookie('categoryMasterOrder');
+        if (savedMaster) {
+          const parsed = savedMaster
+            .split(',')
+            .map((v) => parseInt(v))
+            .filter((v) => catData.some((c: FunctionCategory) => c.id === v));
+          const missing = catData
+            .map((c: FunctionCategory) => c.id)
+            .filter((id: number) => !parsed.includes(id));
+          catMasterOrder = [...parsed, ...missing];
+        }
+        setCategoryMasterOrder(catMasterOrder);
+        setCookie('categoryMasterOrder', catMasterOrder.join(','));
 
         const hasUncategorized = funcData.some((f: FunctionMaster) => f.category_id === null);
 
         const g: Record<string, boolean> = { facility: visibleGroups['facility'] ?? true };
-        catOrder.forEach((id: number) => {
+        funcCatOrder.forEach((id: number) => {
           g[`cat_${id}`] = visibleGroups[`cat_${id}`] ?? true;
         });
         if (hasUncategorized) {
@@ -314,7 +345,7 @@ export default function App() {
         setCookie('visibleColumnGroups', JSON.stringify(g));
 
         const c: Record<string, boolean> = { facility: collapsedGroups['facility'] ?? false };
-        catOrder.forEach((id: number) => {
+        funcCatOrder.forEach((id: number) => {
           c[`cat_${id}`] = collapsedGroups[`cat_${id}`] ?? false;
         });
         if (hasUncategorized) {
@@ -1206,7 +1237,7 @@ export default function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {categoryOrder
+                    {categoryMasterOrder
                       .map((id) => allCategories.find((c) => c.id === id))
                       .filter((c): c is FunctionCategory => !!c)
                       .filter((c) =>
@@ -1223,11 +1254,11 @@ export default function App() {
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={() => {
                             if (dragCategoryIndex === null) return;
-                            const newOrder = [...categoryOrder];
+                            const newOrder = [...categoryMasterOrder];
                             const [m] = newOrder.splice(dragCategoryIndex, 1);
                             newOrder.splice(idx, 0, m);
-                            setCategoryOrder(newOrder);
-                            setCookie('categoryOrder', newOrder.join(','));
+                            setCategoryMasterOrder(newOrder);
+                            setCookie('categoryMasterOrder', newOrder.join(','));
                             setDragCategoryIndex(null);
                           }}
                         >
@@ -1700,7 +1731,7 @@ export default function App() {
                               const [m] = newOrder.splice(fromIdx, 1);
                               newOrder.splice(toIdx, 0, m);
                               setCategoryOrder(newOrder);
-                              setCookie('categoryOrder', newOrder.join(','));
+                              setCookie('functionCategoryOrder', newOrder.join(','));
 
                               const sorted = [
                                 ...newOrder.flatMap((cid) =>
