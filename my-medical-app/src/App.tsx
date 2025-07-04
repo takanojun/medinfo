@@ -1931,7 +1931,7 @@ export default function App() {
                   <option value="">未選択</option>
                   {categoryOrder
                     .map((id) => allCategories.find((c) => c.id === id))
-                    .filter((c): c is FunctionCategory => !!c)
+                    .filter((c): c is FunctionCategory => !!c && !c.is_deleted)
                     .map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
