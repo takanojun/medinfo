@@ -69,8 +69,8 @@ export default function App() {
   const [allCategories, setAllCategories] = useState<FunctionCategory[]>([]);
   const [categoryOrder, setCategoryOrder] = useState<number[]>([]);
   const [functionOrder, setFunctionOrder] = useState<number[]>([]);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragCategoryIndex, setDragCategoryIndex] = useState<number | null>(null);
+  const [dragCategoryForFuncList, setDragCategoryForFuncList] = useState<number | null>(null);
 
   const [searchText, setSearchText] = useState('');
   const [sortKey, setSortKey] = useState<string>('id');
@@ -1629,8 +1629,8 @@ export default function App() {
                   <thead>
                     <tr className="bg-gray-200">
                       <th className="px-2 py-1 border">ID</th>
-                      <th className="px-2 py-1 border">名称</th>
                       <th className="px-2 py-1 border">カテゴリ</th>
+                      <th className="px-2 py-1 border">名称</th>
                       <th className="px-2 py-1 border">操作</th>
                     </tr>
                   </thead>
@@ -1648,28 +1648,64 @@ export default function App() {
                           functionCategoryFilter === '' ||
                           f.category_id === functionCategoryFilter
                       )
-                      .map((func, idx) => (
-                        <tr
-                          key={func.id}
-                          className="hover:bg-gray-50"
-                          draggable
-                          onDragStart={() => setDragIndex(idx)}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={() => {
-                            if (dragIndex === null) return;
-                            const newOrder = [...functionOrder];
-                            const [moved] = newOrder.splice(dragIndex, 1);
-                            newOrder.splice(idx, 0, moved);
-                            setFunctionOrder(newOrder);
-                            setCookie('functionOrder', newOrder.join(','));
-                            setDragIndex(null);
-                          }}
-                        >
+                      .map((func) => (
+                        <tr key={func.id} className="hover:bg-gray-50">
                           <td className="border px-2">{func.id}</td>
+                          <td
+                            className="border px-2 cursor-move bg-gray-50"
+                            draggable
+                            onDragStart={(e) => {
+                              e.stopPropagation();
+                              if (func.category_id != null) {
+                                setDragCategoryForFuncList(func.category_id);
+                              }
+                            }}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={() => {
+                              if (
+                                dragCategoryForFuncList === null ||
+                                func.category_id === null ||
+                                dragCategoryForFuncList === func.category_id
+                              )
+                                return;
+                              const fromIdx = categoryOrder.indexOf(
+                                dragCategoryForFuncList!,
+                              );
+                              const toIdx = categoryOrder.indexOf(func.category_id!);
+                              if (fromIdx === -1 || toIdx === -1) return;
+                              const newOrder = [...categoryOrder];
+                              const [m] = newOrder.splice(fromIdx, 1);
+                              newOrder.splice(toIdx, 0, m);
+                              setCategoryOrder(newOrder);
+                              setCookie('categoryOrder', newOrder.join(','));
+
+                              // 関連する機能順も更新
+                              const sorted = [
+                                ...newOrder.flatMap((cid) =>
+                                  functionOrder
+                                    .map((id) => allFunctions.find((f) => f.id === id))
+                                    .filter(
+                                      (f): f is FunctionMaster =>
+                                        !!f && f.category_id === cid,
+                                    )
+                                    .map((f) => f.id),
+                                ),
+                                ...functionOrder.filter((id) => {
+                                  const f = allFunctions.find((fn) => fn.id === id);
+                                  return !f || f.category_id === null;
+                                }),
+                              ];
+                              setFunctionOrder(sorted);
+                              setCookie('functionOrder', sorted.join(','));
+                              setDragCategoryForFuncList(null);
+                            }}
+                          >
+                            {
+                              allCategories.find((c) => c.id === func.category_id)
+                                ?.name || '未選択'
+                            }
+                          </td>
                           <td className="border px-2">{func.name}</td>
-                          <td className="border px-2">{
-                            allCategories.find((c) => c.id === func.category_id)?.name || '未選択'
-                          }</td>
                           <td className="border px-2">
                             <button
                               className="px-2 py-1 bg-blue-500 text-white rounded mr-2"
