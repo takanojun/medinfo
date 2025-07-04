@@ -45,7 +45,7 @@ class FunctionCreate(BaseModel):
     @validator("name")
     def validate_name(cls, v: str) -> str:
         if not v.strip():
-            raise ValueError("name must not be blank")
+            raise ValueError("名称が未入力のため登録できません")
         return v
 
 
@@ -72,7 +72,7 @@ class MedicalFacilityBase(BaseModel):
     @validator("short_name")
     def validate_short_name(cls, v: str) -> str:
         if not v.strip():
-            raise ValueError("short_name must not be blank")
+            raise ValueError("略名が未入力のため登録できません")
         return v
 
 class MedicalFacility(MedicalFacilityBase):
@@ -96,7 +96,7 @@ class MedicalFacilityUpdate(BaseModel):
     @validator("short_name")
     def validate_short_name(cls, v: Optional[str]) -> Optional[str]:
         if v is not None and not v.strip():
-            raise ValueError("short_name must not be blank")
+            raise ValueError("略名が未入力のため登録できません")
         return v
 
 class FacilityFunctionEntryCreate(BaseModel):
@@ -120,7 +120,7 @@ class FunctionUpdate(BaseModel):
     @validator("name")
     def validate_name(cls, v: Optional[str]) -> Optional[str]:
         if v is not None and not v.strip():
-            raise ValueError("name must not be blank")
+            raise ValueError("名称が未入力のため登録できません")
         return v
 
 class FacilityFunctionEntryUpdate(BaseModel):
@@ -141,7 +141,7 @@ class FunctionCategoryCreate(BaseModel):
     @validator("name")
     def validate_name(cls, v: str) -> str:
         if not v.strip():
-            raise ValueError("name must not be blank")
+            raise ValueError("カテゴリ名が未入力のため登録できません")
         return v
 
 
@@ -152,6 +152,6 @@ class FunctionCategoryUpdate(BaseModel):
     @validator("name")
     def validate_name(cls, v: Optional[str]) -> Optional[str]:
         if v is not None and not v.strip():
-            raise ValueError("name must not be blank")
+            raise ValueError("カテゴリ名が未入力のため登録できません")
         return v
 
