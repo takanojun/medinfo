@@ -562,15 +562,24 @@ export default function App() {
           });
 
     request
-      .then((res) => res.json())
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          showError(data.detail ?? '保存に失敗しました');
+          throw new Error('save failed');
+        }
+        return data;
+      })
       .then(() => {
         setIsFacilityModalOpen(false);
         setEditingFacility(null);
         fetchFacilities();
       })
       .catch((err) => {
-        console.error('保存エラー:', err);
-        showError('保存に失敗しました');
+        if (err.message !== 'save failed') {
+          console.error('保存エラー:', err);
+          showError('保存に失敗しました');
+        }
       });
   };
 
@@ -675,7 +684,14 @@ export default function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
-      .then((res) => res.json())
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          showError(data.detail ?? '保存に失敗しました');
+          throw new Error('save failed');
+        }
+        return data;
+      })
       .then(() => {
         setIsFunctionMasterModalOpen(false);
         setEditingFunctionMaster(null);
@@ -686,8 +702,10 @@ export default function App() {
         refreshData();
       })
       .catch((err) => {
-        console.error('保存エラー:', err);
-        showError('保存に失敗しました');
+        if (err.message !== 'save failed') {
+          console.error('保存エラー:', err);
+          showError('保存に失敗しました');
+        }
       });
   };
 
@@ -740,7 +758,14 @@ export default function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
-      .then((res) => res.json())
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          showError(data.detail ?? '保存に失敗しました');
+          throw new Error('save failed');
+        }
+        return data;
+      })
       .then(() => {
         setIsCategoryMasterModalOpen(false);
         setEditingCategory(null);
@@ -749,8 +774,10 @@ export default function App() {
         refreshData();
       })
       .catch((err) => {
-        console.error('保存エラー:', err);
-        showError('保存に失敗しました');
+        if (err.message !== 'save failed') {
+          console.error('保存エラー:', err);
+          showError('保存に失敗しました');
+        }
       });
   };
 
