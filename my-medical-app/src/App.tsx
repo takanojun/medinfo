@@ -959,7 +959,12 @@ export default function App() {
                 if (colsInGroup.length === 0) return null;
                 const span = collapsedGroups[g.id] ? 1 : colsInGroup.length;
                 return (
-                  <th key={g.id} colSpan={span} className="border px-2">
+                  <th
+                    key={g.id}
+                    colSpan={span}
+                    className="border px-2 cursor-pointer"
+                    onClick={() => toggleCollapse(g.id)}
+                  >
                     <div className="flex items-center justify-between">
                       <span>{g.label}</span>
                       <button
