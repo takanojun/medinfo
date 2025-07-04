@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from typing import Optional, List
 
 
@@ -42,6 +42,12 @@ class FunctionCreate(BaseModel):
     choices: List[str] = []
     category_id: Optional[int] = None
 
+    @validator("name")
+    def validate_name(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("name must not be blank")
+        return v
+
 
 class FacilityFunctionEntryBase(BaseModel):
     id: int
@@ -63,6 +69,12 @@ class MedicalFacilityBase(BaseModel):
     fax: Optional[str]
     remarks: Optional[str]
 
+    @validator("short_name")
+    def validate_short_name(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("short_name must not be blank")
+        return v
+
 class MedicalFacility(MedicalFacilityBase):
     id: int
     functions: List[FacilityFunctionEntryBase] = []
@@ -80,6 +92,12 @@ class MedicalFacilityUpdate(BaseModel):
     emails: Optional[List[ContactInfo]] = None
     fax: Optional[str] = None
     remarks: Optional[str] = None
+
+    @validator("short_name")
+    def validate_short_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not v.strip():
+            raise ValueError("short_name must not be blank")
+        return v
 
 class FacilityFunctionEntryCreate(BaseModel):
     facility_id: int
@@ -99,6 +117,12 @@ class FunctionUpdate(BaseModel):
     choices: Optional[List[str]] = None
     category_id: Optional[int] = None
 
+    @validator("name")
+    def validate_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not v.strip():
+            raise ValueError("name must not be blank")
+        return v
+
 class FacilityFunctionEntryUpdate(BaseModel):
     """
     施設機能割り当て情報の更新用スキーマ。
@@ -114,8 +138,20 @@ class FunctionCategoryCreate(BaseModel):
     name: str
     description: Optional[str] = None
 
+    @validator("name")
+    def validate_name(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("name must not be blank")
+        return v
+
 
 class FunctionCategoryUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+
+    @validator("name")
+    def validate_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not v.strip():
+            raise ValueError("name must not be blank")
+        return v
 
