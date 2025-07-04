@@ -794,7 +794,9 @@ export default function App() {
       facility.city || '',
       facility.address_detail || '',
       facility.phone_numbers.map(p => p.value).join(', '),
+      facility.phone_numbers.map(p => p.comment || '').join(', '),
       facility.emails.map(e => e.value).join(', '),
+      facility.emails.map(e => e.comment || '').join(', '),
       facility.fax || '',
       facility.remarks || '',
     ];
