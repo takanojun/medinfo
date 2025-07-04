@@ -55,6 +55,23 @@ def update_function(function_id: int, update_data: schemas.FunctionUpdate, db: S
     )
     if not db_function:
         raise HTTPException(status_code=404, detail="Function not found")
+
+    # selection_type を single から multiple に変更する場合、
+    # 既存の施設機能割り当ての選択値をリセットする
+    if (
+        update_data.selection_type
+        and update_data.selection_type != db_function.selection_type
+        and db_function.selection_type == "single"
+        and update_data.selection_type == "multiple"
+    ):
+        entries = (
+            db.query(models.FacilityFunctionEntry)
+            .filter(models.FacilityFunctionEntry.function_id == function_id)
+            .all()
+        )
+        for e in entries:
+            e.selected_values = []
+
     
     # 送られてきた項目だけ更新する
     for key, value in update_data.dict(exclude_unset=True).items():
