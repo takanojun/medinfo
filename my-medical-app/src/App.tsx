@@ -72,9 +72,11 @@ export default function App() {
   const [categoryOrder, setCategoryOrder] = useState<number[]>([]);
   const [categoryMasterOrder, setCategoryMasterOrder] = useState<number[]>([]);
   const [functionOrder, setFunctionOrder] = useState<number[]>([]);
+  const [facilityOrder, setFacilityOrder] = useState<number[]>([]);
   const [dragCategoryIndex, setDragCategoryIndex] = useState<number | null>(null);
   const [dragCategoryForFuncList, setDragCategoryForFuncList] = useState<number | null>(null);
   const [dragFunctionId, setDragFunctionId] = useState<number | null>(null);
+  const [dragFacilityIndex, setDragFacilityIndex] = useState<number | null>(null);
 
   const [searchText, setSearchText] = useState('');
   const [searchMode, setSearchMode] = useState<'AND' | 'OR'>('AND');
@@ -205,6 +207,20 @@ export default function App() {
           });
           return updated;
         });
+        let order = list.map((f: Facility) => f.id);
+        const saved = getCookie('facilityOrder');
+        if (saved) {
+          const parsed = saved
+            .split(',')
+            .map((v) => parseInt(v))
+            .filter((v) => list.some((f: Facility) => f.id === v));
+          const missing = list
+            .map((f: Facility) => f.id)
+            .filter((id: number) => !parsed.includes(id));
+          order = [...parsed, ...missing];
+        }
+        setFacilityOrder(order);
+        setCookie('facilityOrder', order.join(','));
       })
       .catch((err) => {
         console.error('施設情報取得エラー:', err);
@@ -443,6 +459,20 @@ export default function App() {
           });
           return updated;
         });
+        let facOrder = facList.map((f: Facility) => f.id);
+        const savedFacOrder = getCookie('facilityOrder');
+        if (savedFacOrder) {
+          const parsed = savedFacOrder
+            .split(',')
+            .map((v) => parseInt(v))
+            .filter((v) => facList.some((f: Facility) => f.id === v));
+          const missing = facList
+            .map((f: Facility) => f.id)
+            .filter((id: number) => !parsed.includes(id));
+          facOrder = [...parsed, ...missing];
+        }
+        setFacilityOrder(facOrder);
+        setCookie('facilityOrder', facOrder.join(','));
         let order = funcData.map((f: FunctionMaster) => f.id);
         const savedOrder = getCookie('functionOrder');
         if (savedOrder) {
@@ -986,7 +1016,9 @@ export default function App() {
   // ソート
   const sortedFacilities = [...filteredFacilities].sort((a, b) => {
     if (sortOrder === 'none') {
-      return a.id - b.id;
+      return (
+        facilityOrder.indexOf(a.id) - facilityOrder.indexOf(b.id)
+      );
     }
       let aVal: string | number | ContactInfo[] = '';
       let bVal: string | number | ContactInfo[] = '';
@@ -1042,13 +1074,16 @@ export default function App() {
     .split(/[\s\u3000]+/)
     .filter((v) => v)
     .map((v) => v.toLowerCase());
-  const filteredFacilitiesModal = facilities.filter((f) =>
-    matchesKeywords(
-      `${f.id} ${f.short_name} ${f.official_name || ''}`,
-      facilityModalKeywords,
-      facilityModalSearchMode,
-    ),
-  );
+  const filteredFacilitiesModal = facilities
+    .slice()
+    .sort((a, b) => facilityOrder.indexOf(a.id) - facilityOrder.indexOf(b.id))
+    .filter((f) =>
+      matchesKeywords(
+        `${f.id} ${f.short_name} ${f.official_name || ''}`,
+        facilityModalKeywords,
+        facilityModalSearchMode,
+      ),
+    );
 
   return (
     <div className="bg-gray-100 h-screen p-0 overflow-hidden flex flex-col">
@@ -1564,7 +1599,25 @@ export default function App() {
               </div>
               <div className="max-h-60 overflow-y-auto">
                 {filteredFacilitiesModal.map((f) => (
-                  <div key={f.id} className="flex justify-between items-center py-2">
+                  <div
+                    key={f.id}
+                    className="flex justify-between items-center py-2"
+                    draggable
+                    onDragStart={() =>
+                      setDragFacilityIndex(facilityOrder.indexOf(f.id))
+                    }
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => {
+                      if (dragFacilityIndex === null) return;
+                      const target = facilityOrder.indexOf(f.id);
+                      const newOrder = [...facilityOrder];
+                      const [m] = newOrder.splice(dragFacilityIndex, 1);
+                      newOrder.splice(target, 0, m);
+                      setFacilityOrder(newOrder);
+                      setCookie('facilityOrder', newOrder.join(','));
+                      setDragFacilityIndex(null);
+                    }}
+                  >
                     <span>{f.short_name}</span>
                     <Switch
                       checked={visibleFacilities[f.id] !== false}
