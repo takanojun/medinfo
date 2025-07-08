@@ -1,5 +1,5 @@
 // App.tsx
-import React, { useEffect, useState, Fragment } from 'react';
+import React, { useEffect, useState, Fragment, useRef } from 'react';
 import { Dialog, Transition, Switch } from '@headlessui/react';
 import './App.css';
 
@@ -153,6 +153,23 @@ export default function App() {
   };
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    if (isMenuOpen) {
+      window.addEventListener('click', handleOutside);
+      window.addEventListener('contextmenu', handleOutside);
+    }
+    return () => {
+      window.removeEventListener('click', handleOutside);
+      window.removeEventListener('contextmenu', handleOutside);
+    };
+  }, [isMenuOpen]);
 
   // 医療機関編集モーダル用
   const [isFacilityModalOpen, setIsFacilityModalOpen] = useState(false);
@@ -1042,7 +1059,7 @@ export default function App() {
       )}
       <div className="flex items-center mb-2 p-2 bg-gray-100 flex-none sticky top-0 z-30">
         <h1 className="text-2xl font-bold">医療機関機能一覧</h1>
-        <div className="relative ml-4">
+        <div className="relative ml-4" ref={menuRef}>
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="px-3 py-2 bg-gray-200 rounded"
