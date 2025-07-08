@@ -63,3 +63,11 @@
 .tooltip-container:hover::after {
   opacity: 1;
 }
+
+.context-menu {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  z-index: 50;
+}
