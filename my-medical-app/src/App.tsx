@@ -103,6 +103,17 @@ export default function App() {
   const [modalSearchText, setModalSearchText] = useState('');
   const [modalSearchMode, setModalSearchMode] = useState<'AND' | 'OR'>('AND');
 
+  // 表示医療機関制御用
+  const [visibleFacilities, setVisibleFacilities] = useState<Record<number, boolean>>({});
+  const [isFacilityVisibilityModalOpen, setIsFacilityVisibilityModalOpen] = useState(false);
+  const [facilityModalSearchText, setFacilityModalSearchText] = useState('');
+  const [facilityModalSearchMode, setFacilityModalSearchMode] = useState<'AND' | 'OR'>('AND');
+
+  // 一時的な列・行非表示用
+  const [tempHiddenColumns, setTempHiddenColumns] = useState<Record<string, boolean>>({});
+  const [headerContextMenu, setHeaderContextMenu] = useState<{ x: number; y: number; key: string } | null>(null);
+  const [rowContextMenu, setRowContextMenu] = useState<{ x: number; y: number; facility: Facility } | null>(null);
+
   // 機能マスタ・カテゴリマスタ用検索/フィルタ
   const [functionListSearchText, setFunctionListSearchText] = useState('');
   const [functionListSearchMode, setFunctionListSearchMode] = useState<'AND' | 'OR'>('AND');
@@ -118,6 +129,15 @@ export default function App() {
     setNotification(message);
     setTimeout(() => setNotification(null), 5000);
   };
+
+  useEffect(() => {
+    const closeMenus = () => {
+      setHeaderContextMenu(null);
+      setRowContextMenu(null);
+    };
+    window.addEventListener('click', closeMenus);
+    return () => window.removeEventListener('click', closeMenus);
+  }, []);
 
   const matchesKeywords = (
     text: string,
@@ -158,7 +178,17 @@ export default function App() {
   const fetchFacilities = () =>
     fetch(`${apiBase}/facilities`)
       .then((res) => res.json())
-      .then((data) => setFacilities(data.map(normalizeFacility)))
+      .then((data) => {
+        const list = data.map(normalizeFacility);
+        setFacilities(list);
+        setVisibleFacilities((prev) => {
+          const updated = { ...prev };
+          list.forEach((f: Facility) => {
+            if (!(f.id in updated)) updated[f.id] = true;
+          });
+          return updated;
+        });
+      })
       .catch((err) => {
         console.error('施設情報取得エラー:', err);
         showError('施設情報の取得に失敗しました');
@@ -387,7 +417,15 @@ export default function App() {
         setCookie('collapsedColumnGroups', JSON.stringify(c));
 
         setAllFunctions(funcData);
-        setFacilities(facData.map(normalizeFacility));
+        const facList = facData.map(normalizeFacility);
+        setFacilities(facList);
+        setVisibleFacilities((prev) => {
+          const updated = { ...prev };
+          facList.forEach((f: Facility) => {
+            if (!(f.id in updated)) updated[f.id] = true;
+          });
+          return updated;
+        });
         let order = funcData.map((f: FunctionMaster) => f.id);
         const savedOrder = getCookie('functionOrder');
         if (savedOrder) {
@@ -512,6 +550,30 @@ export default function App() {
     }
   };
 
+  const handleHeaderContextMenu = (
+    e: React.MouseEvent<HTMLTableCellElement, MouseEvent>,
+    key: string,
+  ) => {
+    e.preventDefault();
+    setHeaderContextMenu({ x: e.clientX, y: e.clientY, key });
+  };
+
+  const handleHideColumn = (key: string) => {
+    setTempHiddenColumns((prev) => ({ ...prev, [key]: true }));
+  };
+
+  const handleFacilityCellRightClick = (
+    e: React.MouseEvent<HTMLTableCellElement, MouseEvent>,
+    facility: Facility,
+  ) => {
+    e.preventDefault();
+    setRowContextMenu({ x: e.clientX, y: e.clientY, facility });
+  };
+
+  const handleHideFacility = (id: number) => {
+    setVisibleFacilities((prev) => ({ ...prev, [id]: false }));
+  };
+
   const handleRightClick = (
     e: React.MouseEvent<HTMLTableCellElement, MouseEvent>,
     facilityId: number,
@@ -541,14 +603,6 @@ export default function App() {
     }
   };
 
-  const handleFacilityCellRightClick = (
-    e: React.MouseEvent<HTMLTableCellElement, MouseEvent>,
-    facility: Facility
-  ) => {
-    e.preventDefault();
-    setEditingFacility(normalizeFacility(facility));
-    setIsFacilityModalOpen(true);
-  };
 
   const handleSaveFacility = () => {
     if (!editingFacility) return;
@@ -952,6 +1006,10 @@ export default function App() {
     return 0;
   });
 
+  const displayFacilities = sortedFacilities.filter(
+    (f) => visibleFacilities[f.id] !== false,
+  );
+
   // モーダル内の検索フィルタ
   const modalKeywords = modalSearchText
     .trim()
@@ -960,6 +1018,19 @@ export default function App() {
     .map((v) => v.toLowerCase());
   const filteredColumns = columns.filter((col) =>
     matchesKeywords(col.label, modalKeywords, modalSearchMode)
+  );
+
+  const facilityModalKeywords = facilityModalSearchText
+    .trim()
+    .split(/[\s\u3000]+/)
+    .filter((v) => v)
+    .map((v) => v.toLowerCase());
+  const filteredFacilitiesModal = facilities.filter((f) =>
+    matchesKeywords(
+      `${f.id} ${f.short_name} ${f.official_name || ''}`,
+      facilityModalKeywords,
+      facilityModalSearchMode,
+    ),
   );
 
   return (
@@ -988,6 +1059,15 @@ export default function App() {
                 className="px-4 py-2 hover:bg-gray-100 text-left"
               >
                 表示項目変更
+              </button>
+              <button
+                onClick={() => {
+                  setIsFacilityVisibilityModalOpen(true);
+                  setIsMenuOpen(false);
+                }}
+                className="px-4 py-2 hover:bg-gray-100 text-left"
+              >
+                表示医療機関変更
               </button>
               <button
                 className="px-4 py-2 hover:bg-gray-100 text-left"
@@ -1081,7 +1161,10 @@ export default function App() {
               {columnGroups.map((g) => {
                 if (!visibleGroups[g.id]) return null;
                 const colsInGroup = columns.filter(
-                  (c) => c.group === g.id && visibleColumns[c.key]
+                  (c) =>
+                    c.group === g.id &&
+                    visibleColumns[c.key] &&
+                    !tempHiddenColumns[c.key],
                 );
                 if (colsInGroup.length === 0) return null;
                 const span = collapsedGroups[g.id] ? 1 : colsInGroup.length;
@@ -1109,7 +1192,10 @@ export default function App() {
               {columnGroups.map((g) => {
                 if (!visibleGroups[g.id]) return null;
                 const colsInGroup = columns.filter(
-                  (c) => c.group === g.id && visibleColumns[c.key]
+                  (c) =>
+                    c.group === g.id &&
+                    visibleColumns[c.key] &&
+                    !tempHiddenColumns[c.key],
                 );
                 if (colsInGroup.length === 0) return null;
                 if (collapsedGroups[g.id]) {
@@ -1133,6 +1219,7 @@ export default function App() {
                         (isFunc && memo ? ' tooltip-container' : '')
                       }
                       onClick={() => handleSort(col.key)}
+                      onContextMenu={(e) => handleHeaderContextMenu(e, col.key)}
                       data-tooltip={isFunc && memo ? memo : undefined}
                     >
                       {col.label}{' '}
@@ -1145,12 +1232,15 @@ export default function App() {
             </tr>
           </thead>
           <tbody>
-            {sortedFacilities.map((facility) => (
+            {displayFacilities.map((facility) => (
               <tr key={facility.id} className="hover:bg-gray-50">
                 {columnGroups.map((g) => {
                   if (!visibleGroups[g.id]) return null;
                   const colsInGroup = columns.filter(
-                    (c) => c.group === g.id && visibleColumns[c.key]
+                    (c) =>
+                      c.group === g.id &&
+                      visibleColumns[c.key] &&
+                      !tempHiddenColumns[c.key],
                   );
                   if (colsInGroup.length === 0) return null;
                   if (collapsedGroups[g.id]) {
@@ -1241,6 +1331,50 @@ export default function App() {
           </tbody>
         </table>
       </div>
+
+      {headerContextMenu && (
+        <div
+          className="context-menu"
+          style={{ top: headerContextMenu.y, left: headerContextMenu.x }}
+        >
+          <button
+            className="block px-4 py-2 hover:bg-gray-100"
+            onClick={() => {
+              handleHideColumn(headerContextMenu.key);
+              setHeaderContextMenu(null);
+            }}
+          >
+            非表示
+          </button>
+        </div>
+      )}
+
+      {rowContextMenu && (
+        <div
+          className="context-menu"
+          style={{ top: rowContextMenu.y, left: rowContextMenu.x }}
+        >
+          <button
+            className="block px-4 py-2 hover:bg-gray-100"
+            onClick={() => {
+              setEditingFacility(normalizeFacility(rowContextMenu.facility));
+              setIsFacilityModalOpen(true);
+              setRowContextMenu(null);
+            }}
+          >
+            医療機関情報編集
+          </button>
+          <button
+            className="block px-4 py-2 hover:bg-gray-100"
+            onClick={() => {
+              handleHideFacility(rowContextMenu.facility.id);
+              setRowContextMenu(null);
+            }}
+          >
+            非表示
+          </button>
+        </div>
+      )}
 
 
       </div>
@@ -1366,6 +1500,85 @@ export default function App() {
                 </Dialog.Panel>
               </Transition.Child>
             </div>
+          </div>
+        </Dialog>
+      </Transition>
+
+      <Transition appear show={isFacilityVisibilityModalOpen} as={Fragment}>
+        <Dialog
+          as="div"
+          className="relative z-10"
+          onClose={() => setIsFacilityVisibilityModalOpen(false)}
+        >
+          <div className="fixed inset-0 bg-black bg-opacity-25" />
+          <div className="fixed inset-0 overflow-y-auto flex items-center justify-center p-4">
+            <Dialog.Panel className="w-full max-w-md bg-white rounded p-6 shadow">
+              <Dialog.Title as="h3" className="text-lg font-medium mb-4">
+                表示医療機関を選択
+              </Dialog.Title>
+              <div className="mb-2 space-y-2">
+                <input
+                  type="text"
+                  placeholder="検索"
+                  value={facilityModalSearchText}
+                  onChange={(e) => setFacilityModalSearchText(e.target.value)}
+                  className="border p-2 w-full"
+                />
+                <div className="flex gap-2">
+                  <label className="flex items-center space-x-1">
+                    <input
+                      type="radio"
+                      value="AND"
+                      checked={facilityModalSearchMode === 'AND'}
+                      onChange={() => setFacilityModalSearchMode('AND')}
+                    />
+                    <span>AND</span>
+                  </label>
+                  <label className="flex items-center space-x-1">
+                    <input
+                      type="radio"
+                      value="OR"
+                      checked={facilityModalSearchMode === 'OR'}
+                      onChange={() => setFacilityModalSearchMode('OR')}
+                    />
+                    <span>OR</span>
+                  </label>
+                </div>
+              </div>
+              <div className="max-h-60 overflow-y-auto">
+                {filteredFacilitiesModal.map((f) => (
+                  <div key={f.id} className="flex justify-between items-center py-2">
+                    <span>{f.short_name}</span>
+                    <Switch
+                      checked={visibleFacilities[f.id] !== false}
+                      onChange={() =>
+                        setVisibleFacilities((prev) => ({
+                          ...prev,
+                          [f.id]: !(prev[f.id] !== false),
+                        }))
+                      }
+                      className={`${
+                        visibleFacilities[f.id] !== false ? 'bg-blue-500' : 'bg-gray-300'
+                      } relative inline-flex h-6 w-11 items-center rounded-full`}
+                    >
+                      <span
+                        className={`${
+                          visibleFacilities[f.id] !== false ? 'translate-x-6' : 'translate-x-1'
+                        } inline-block h-4 w-4 transform rounded-full bg-white transition`}
+                      />
+                    </Switch>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={() => setIsFacilityVisibilityModalOpen(false)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded"
+                >
+                  閉じる
+                </button>
+              </div>
+            </Dialog.Panel>
           </div>
         </Dialog>
       </Transition>
