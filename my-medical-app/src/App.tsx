@@ -1117,17 +1117,30 @@ export default function App() {
                     <th key={`${g.id}-collapsed`} className="py-2 px-4 border whitespace-nowrap"></th>
                   );
                 }
-                return colsInGroup.map((col) => (
-                  <th
-                    key={col.key}
-                    className="py-2 px-4 border cursor-pointer whitespace-nowrap"
-                    onClick={() => handleSort(col.key)}
-                  >
-                    {col.label}{' '}
-                    {sortKey === col.key && sortOrder !== 'none' &&
-                      (sortOrder === 'asc' ? '▲' : '▼')}
-                  </th>
-                ));
+                return colsInGroup.map((col) => {
+                  const isFunc = col.key.startsWith('func_');
+                  const memo = isFunc
+                    ?
+                        allFunctions.find(
+                          (f) => f.id === parseInt(col.key.replace('func_', ''))
+                        )?.memo || ''
+                    : '';
+                  return (
+                    <th
+                      key={col.key}
+                      className={
+                        'py-2 px-4 border cursor-pointer whitespace-nowrap' +
+                        (isFunc && memo ? ' tooltip-container' : '')
+                      }
+                      onClick={() => handleSort(col.key)}
+                      data-tooltip={isFunc && memo ? memo : undefined}
+                    >
+                      {col.label}{' '}
+                      {sortKey === col.key && sortOrder !== 'none' &&
+                        (sortOrder === 'asc' ? '▲' : '▼')}
+                    </th>
+                  );
+                });
               })}
             </tr>
           </thead>
@@ -1154,15 +1167,15 @@ export default function App() {
                       const fEntry = facility.functions.find(
                         (f) => f.function.id === funcId
                       );
+                      const remarks = fEntry?.remarks || '';
                       return (
                         <td
                           key={col.key}
-                          className="py-2 px-4 border whitespace-nowrap tooltip-container"
-                          data-tooltip={
-                            allFunctions.find((f) => f.id === funcId)?.memo ||
-                            allFunctions.find((f) => f.id === funcId)?.name ||
-                            'なし'
+                          className={
+                            'py-2 px-4 border whitespace-nowrap' +
+                            (remarks ? ' tooltip-container' : '')
                           }
+                          data-tooltip={remarks || undefined}
                           onContextMenu={(e) =>
                             handleRightClick(e, facility.id, funcId)
                           }
