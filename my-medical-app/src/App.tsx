@@ -77,6 +77,7 @@ export default function App() {
   const [dragFunctionId, setDragFunctionId] = useState<number | null>(null);
 
   const [searchText, setSearchText] = useState('');
+  const [searchMode, setSearchMode] = useState<'AND' | 'OR'>('AND');
   const [sortKey, setSortKey] = useState<string>('id');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'none'>('none');
 
@@ -100,11 +101,14 @@ export default function App() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryDesc, setNewCategoryDesc] = useState('');
   const [modalSearchText, setModalSearchText] = useState('');
+  const [modalSearchMode, setModalSearchMode] = useState<'AND' | 'OR'>('AND');
 
   // 機能マスタ・カテゴリマスタ用検索/フィルタ
   const [functionListSearchText, setFunctionListSearchText] = useState('');
+  const [functionListSearchMode, setFunctionListSearchMode] = useState<'AND' | 'OR'>('AND');
   const [functionCategoryFilter, setFunctionCategoryFilter] = useState<number | ''>('');
   const [categoryListSearchText, setCategoryListSearchText] = useState('');
+  const [categoryListSearchMode, setCategoryListSearchMode] = useState<'AND' | 'OR'>('AND');
   const [showDeletedFunctions, setShowDeletedFunctions] = useState(false);
   const [showDeletedCategories, setShowDeletedCategories] = useState(false);
 
@@ -113,6 +117,19 @@ export default function App() {
   const showError = (message: string) => {
     setNotification(message);
     setTimeout(() => setNotification(null), 5000);
+  };
+
+  const matchesKeywords = (
+    text: string,
+    keywords: string[],
+    mode: 'AND' | 'OR'
+  ) => {
+    if (keywords.length === 0) return true;
+    const lower = text.toLowerCase();
+    if (mode === 'AND') {
+      return keywords.every((k) => lower.includes(k));
+    }
+    return keywords.some((k) => lower.includes(k));
   };
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -866,6 +883,12 @@ export default function App() {
   };
 
   // 検索フィルタ
+  const searchKeywords = searchText
+    .trim()
+    .split(/[\s\u3000]+/)
+    .filter((v) => v)
+    .map((v) => v.toLowerCase());
+
   const filteredFacilities = facilities.filter((facility) => {
     const targets: string[] = [
       facility.id.toString(),
@@ -874,10 +897,10 @@ export default function App() {
       facility.prefecture || '',
       facility.city || '',
       facility.address_detail || '',
-      facility.phone_numbers.map(p => p.value).join(', '),
-      facility.phone_numbers.map(p => p.comment || '').join(', '),
-      facility.emails.map(e => e.value).join(', '),
-      facility.emails.map(e => e.comment || '').join(', '),
+      facility.phone_numbers.map((p) => p.value).join(', '),
+      facility.phone_numbers.map((p) => p.comment || '').join(', '),
+      facility.emails.map((e) => e.value).join(', '),
+      facility.emails.map((e) => e.comment || '').join(', '),
       facility.fax || '',
       facility.remarks || '',
     ];
@@ -886,9 +909,7 @@ export default function App() {
       targets.push(f.selected_values.join(', '));
       if (f.remarks) targets.push(f.remarks);
     });
-    return targets.some((t) =>
-      t.toLowerCase().includes(searchText.toLowerCase())
-    );
+    return matchesKeywords(targets.join(' '), searchKeywords, searchMode);
   });
 
   // ソート
@@ -932,8 +953,13 @@ export default function App() {
   });
 
   // モーダル内の検索フィルタ
+  const modalKeywords = modalSearchText
+    .trim()
+    .split(/[\s\u3000]+/)
+    .filter((v) => v)
+    .map((v) => v.toLowerCase());
   const filteredColumns = columns.filter((col) =>
-    col.label.toLowerCase().includes(modalSearchText.toLowerCase())
+    matchesKeywords(col.label, modalKeywords, modalSearchMode)
   );
 
   return (
@@ -1027,6 +1053,24 @@ export default function App() {
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
         />
+        <label className="flex items-center space-x-1">
+          <input
+            type="radio"
+            value="AND"
+            checked={searchMode === 'AND'}
+            onChange={() => setSearchMode('AND')}
+          />
+          <span>AND</span>
+        </label>
+        <label className="flex items-center space-x-1">
+          <input
+            type="radio"
+            value="OR"
+            checked={searchMode === 'OR'}
+            onChange={() => setSearchMode('OR')}
+          />
+          <span>OR</span>
+        </label>
       </div>
 
         {/* テーブル */}
@@ -1220,13 +1264,35 @@ export default function App() {
                   </Dialog.Title>
 
                   {/* モーダル内の検索 */}
-                  <input
-                    type="text"
-                    placeholder="検索"
-                    value={modalSearchText}
-                    onChange={(e) => setModalSearchText(e.target.value)}
-                    className="border p-2 mb-4 w-full"
-                  />
+                  <div className="mb-2 space-y-2">
+                    <input
+                      type="text"
+                      placeholder="検索"
+                      value={modalSearchText}
+                      onChange={(e) => setModalSearchText(e.target.value)}
+                      className="border p-2 w-full"
+                    />
+                    <div className="flex gap-2">
+                      <label className="flex items-center space-x-1">
+                        <input
+                          type="radio"
+                          value="AND"
+                          checked={modalSearchMode === 'AND'}
+                          onChange={() => setModalSearchMode('AND')}
+                        />
+                        <span>AND</span>
+                      </label>
+                      <label className="flex items-center space-x-1">
+                        <input
+                          type="radio"
+                          value="OR"
+                          checked={modalSearchMode === 'OR'}
+                          onChange={() => setModalSearchMode('OR')}
+                        />
+                        <span>OR</span>
+                      </label>
+                    </div>
+                  </div>
 
                   {/* トグルリスト */}
                   <div className="max-h-60 overflow-y-auto">
@@ -1314,6 +1380,26 @@ export default function App() {
                   onChange={(e) => setCategoryListSearchText(e.target.value)}
                   className="border p-1 w-full"
                 />
+                <div className="flex gap-2">
+                  <label className="flex items-center space-x-1">
+                    <input
+                      type="radio"
+                      value="AND"
+                      checked={categoryListSearchMode === 'AND'}
+                      onChange={() => setCategoryListSearchMode('AND')}
+                    />
+                    <span>AND</span>
+                  </label>
+                  <label className="flex items-center space-x-1">
+                    <input
+                      type="radio"
+                      value="OR"
+                      checked={categoryListSearchMode === 'OR'}
+                      onChange={() => setCategoryListSearchMode('OR')}
+                    />
+                    <span>OR</span>
+                  </label>
+                </div>
                 <label className="flex items-center space-x-2">
                   <Switch
                     checked={showDeletedCategories}
@@ -1345,11 +1431,18 @@ export default function App() {
                       .map((id) => allCategories.find((c) => c.id === id))
                       .filter((c): c is FunctionCategory => !!c)
                       .filter((c) => showDeletedCategories || !c.is_deleted)
-                      .filter((c) =>
-                        `${c.id}${c.name}${c.description || ''}`
-                          .toLowerCase()
-                          .includes(categoryListSearchText.toLowerCase())
-                      )
+                      .filter((c) => {
+                        const keywords = categoryListSearchText
+                          .trim()
+                          .split(/[\s\u3000]+/)
+                          .filter((v) => v)
+                          .map((v) => v.toLowerCase());
+                        return matchesKeywords(
+                          `${c.id}${c.name}${c.description || ''}`,
+                          keywords,
+                          categoryListSearchMode
+                        );
+                      })
                       .map((cat, idx) => (
                         <tr
                           key={cat.id}
@@ -1750,6 +1843,24 @@ export default function App() {
                   onChange={(e) => setFunctionListSearchText(e.target.value)}
                   className="border p-1 flex-grow"
                 />
+                <label className="flex items-center space-x-1">
+                  <input
+                    type="radio"
+                    value="AND"
+                    checked={functionListSearchMode === 'AND'}
+                    onChange={() => setFunctionListSearchMode('AND')}
+                  />
+                  <span>AND</span>
+                </label>
+                <label className="flex items-center space-x-1">
+                  <input
+                    type="radio"
+                    value="OR"
+                    checked={functionListSearchMode === 'OR'}
+                    onChange={() => setFunctionListSearchMode('OR')}
+                  />
+                  <span>OR</span>
+                </label>
                 <select
                   className="border p-1"
                   value={functionCategoryFilter}
@@ -1798,11 +1909,18 @@ export default function App() {
                       .map((id: number) => allFunctions.find((f) => f.id === id))
                       .filter((f): f is FunctionMaster => !!f)
                       .filter((f) => showDeletedFunctions || !f.is_deleted)
-                      .filter((f) =>
-                        `${f.id}${f.name}${f.memo || ''}`
-                          .toLowerCase()
-                          .includes(functionListSearchText.toLowerCase())
-                      )
+                      .filter((f) => {
+                        const keywords = functionListSearchText
+                          .trim()
+                          .split(/[\s\u3000]+/)
+                          .filter((v) => v)
+                          .map((v) => v.toLowerCase());
+                        return matchesKeywords(
+                          `${f.id}${f.name}${f.memo || ''}`,
+                          keywords,
+                          functionListSearchMode
+                        );
+                      })
                       .filter(
                         (f) =>
                           functionCategoryFilter === '' ||
