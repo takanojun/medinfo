@@ -218,6 +218,11 @@ export default function App() {
             .map((f: Facility) => f.id)
             .filter((id: number) => !parsed.includes(id));
           order = [...parsed, ...missing];
+        } else {
+          order = list
+            .slice()
+            .sort((a, b) => a.short_name.localeCompare(b.short_name))
+            .map((f) => f.id);
         }
         setFacilityOrder(order);
         setCookie('facilityOrder', order.join(','));
@@ -470,6 +475,11 @@ export default function App() {
             .map((f: Facility) => f.id)
             .filter((id: number) => !parsed.includes(id));
           facOrder = [...parsed, ...missing];
+        } else {
+          facOrder = facList
+            .slice()
+            .sort((a, b) => a.short_name.localeCompare(b.short_name))
+            .map((f) => f.id);
         }
         setFacilityOrder(facOrder);
         setCookie('facilityOrder', facOrder.join(','));
