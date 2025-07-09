@@ -22,6 +22,11 @@ uvicorn backend.app.main:app --reload --port 8001
 3. 環境変数 `VITE_API_URL` にバックエンド API の URL を設定します。例: `export VITE_API_URL="http://localhost:8001"`
 4. `npm run dev` で開発サーバーを起動します。
 
+### 日本語入力を常に有効にする
+アプリ側では `ImeInput` と `ImeTextarea` コンポーネントを用意しており、
+通常の `input` や `textarea` の代わりに使用すると IME が初期状態から日本語入力モードになります。
+電話番号やメール、FAX の入力には従来の `input` を使ってください。
+
 ## サブディレクトリ README
 - [backend/README.md](backend/README.md)
 - [my-medical-app/README.md](my-medical-app/README.md)
