@@ -126,6 +126,7 @@ export default function App() {
   const [categoryListSearchMode, setCategoryListSearchMode] = useState<'AND' | 'OR'>('AND');
   const [showDeletedFunctions, setShowDeletedFunctions] = useState(false);
   const [showDeletedCategories, setShowDeletedCategories] = useState(false);
+  const [showFunctionRemarks, setShowFunctionRemarks] = useState(true);
 
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -1215,6 +1216,22 @@ export default function App() {
           />
           <span>OR</span>
         </label>
+        <label className="flex items-center space-x-2">
+          <Switch
+            checked={showFunctionRemarks}
+            onChange={setShowFunctionRemarks}
+            className={`${
+              showFunctionRemarks ? 'bg-blue-500' : 'bg-gray-300'
+            } relative inline-flex h-6 w-11 items-center rounded-full`}
+          >
+            <span
+              className={`${
+                showFunctionRemarks ? 'translate-x-6' : 'translate-x-1'
+              } inline-block h-4 w-4 transform rounded-full bg-white transition`}
+            />
+          </Switch>
+          <span>備考表示</span>
+        </label>
       </div>
 
         {/* テーブル */}
@@ -1339,7 +1356,21 @@ export default function App() {
                               {fEntry.selected_values.map((v, i) => (
                                 <div key={i}>{v}</div>
                               ))}
-                              {fEntry.remarks && <div>{fEntry.remarks}</div>}
+                              {showFunctionRemarks && fEntry.remarks && (
+                                (() => {
+                                  const lines = fEntry.remarks.split('\n');
+                                  const display = lines.slice(0, 2);
+                                  const truncated = lines.length > 2;
+                                  return (
+                                    <>
+                                      {display.map((l, i) => (
+                                        <div key={i}>{l}</div>
+                                      ))}
+                                      {truncated && <div>...</div>}
+                                    </>
+                                  );
+                                })()
+                              )}
                             </div>
                           ) : (
                             '-'
