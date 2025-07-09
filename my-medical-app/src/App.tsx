@@ -1939,7 +1939,9 @@ export default function App() {
                     {editingFacility.phone_numbers.map((p, idx) => (
                       <div className="flex gap-2" key={idx}>
                         <input
-                          type="text"
+                          type="tel"
+                          lang="en"
+                          inputMode="tel"
                           placeholder="電話番号"
                           value={p.value}
                           onChange={(e) => {
@@ -1985,7 +1987,9 @@ export default function App() {
                     {editingFacility.emails.map((m, idx) => (
                       <div className="flex gap-2" key={idx}>
                         <input
-                          type="text"
+                          type="email"
+                          lang="en"
+                          inputMode="email"
                           placeholder="メールアドレス"
                           value={m.value}
                           onChange={(e) => {
@@ -2027,7 +2031,9 @@ export default function App() {
                     >メール追加</button>
                   </div>
                   <input
-                    type="text"
+                    type="tel"
+                    lang="en"
+                    inputMode="tel"
                     placeholder="FAX"
                     value={editingFacility.fax || ''}
                     onChange={(e) => setEditingFacility({ ...editingFacility, fax: e.target.value })}
