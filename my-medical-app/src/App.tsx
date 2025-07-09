@@ -2,6 +2,8 @@
 import React, { useEffect, useState, Fragment, useRef } from 'react';
 import { Dialog, Transition, Switch } from '@headlessui/react';
 import './App.css';
+import ImeInput from './components/ImeInput';
+import ImeTextarea from './components/ImeTextarea';
 
 const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
@@ -1188,7 +1190,7 @@ export default function App() {
       <div className="flex-1 overflow-hidden px-4 pt-2 pb-4 flex flex-col">
       {/* 検索 */}
       <div className="mb-2 flex items-center gap-2">
-        <input
+        <ImeInput
           type="text"
           placeholder="キーワードで検索"
           className="border p-2 w-64"
@@ -1474,7 +1476,7 @@ export default function App() {
 
                   {/* モーダル内の検索 */}
                   <div className="mb-2 space-y-2">
-                    <input
+                    <ImeInput
                       type="text"
                       placeholder="検索"
                       value={modalSearchText}
@@ -1579,7 +1581,7 @@ export default function App() {
                 表示医療機関を選択
               </Dialog.Title>
               <div className="mb-2 space-y-2">
-                <input
+                <ImeInput
                   type="text"
                   placeholder="検索"
                   value={facilityModalSearchText}
@@ -1679,7 +1681,7 @@ export default function App() {
                 </button>
               </div>
               <div className="mb-2 space-y-2">
-                <input
+                <ImeInput
                   type="text"
                   placeholder="検索"
                   value={categoryListSearchText}
@@ -1815,14 +1817,14 @@ export default function App() {
               <h3 className="text-lg font-bold mb-4">
                 {editingCategory ? 'カテゴリ編集' : '新規カテゴリ追加'}
               </h3>
-              <input
+              <ImeInput
                 type="text"
                 placeholder="カテゴリ名"
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
                 className="border p-2 w-full mb-4"
               />
-              <textarea
+              <ImeTextarea
                 placeholder="説明"
                 value={newCategoryDesc}
                 onChange={(e) => setNewCategoryDesc(e.target.value)}
@@ -1859,7 +1861,7 @@ export default function App() {
               </h3>
               {editingFacility && (
                 <div className="space-y-2">
-                  <input
+                  <ImeInput
                     type="text"
                     placeholder="略名"
                     value={editingFacility.short_name}
@@ -1868,7 +1870,7 @@ export default function App() {
                     }
                     className="border p-2 w-full"
                   />
-                  <input
+                  <ImeInput
                     type="text"
                     placeholder="正式名称"
                     value={editingFacility.official_name || ''}
@@ -1877,7 +1879,7 @@ export default function App() {
                     }
                     className="border p-2 w-full"
                   />
-                  <input
+                  <ImeInput
                     type="text"
                     placeholder="都道府県"
                     value={editingFacility.prefecture || ''}
@@ -1886,14 +1888,14 @@ export default function App() {
                     }
                     className="border p-2 w-full"
                   />
-                  <input
+                  <ImeInput
                     type="text"
                     placeholder="市町村"
                     value={editingFacility.city || ''}
                     onChange={(e) => setEditingFacility({ ...editingFacility, city: e.target.value })}
                     className="border p-2 w-full"
                   />
-                  <input
+                  <ImeInput
                     type="text"
                     placeholder="住所詳細"
                     value={editingFacility.address_detail || ''}
@@ -1916,7 +1918,7 @@ export default function App() {
                           }}
                           className="border p-2 w-full"
                         />
-                        <input
+                        <ImeInput
                           type="text"
                           placeholder="コメント"
                           value={p.comment}
@@ -1962,7 +1964,7 @@ export default function App() {
                           }}
                           className="border p-2 w-full"
                         />
-                        <input
+                        <ImeInput
                           type="text"
                           placeholder="コメント"
                           value={m.comment}
@@ -2000,7 +2002,7 @@ export default function App() {
                     onChange={(e) => setEditingFacility({ ...editingFacility, fax: e.target.value })}
                     className="border p-2 w-full"
                   />
-                  <textarea
+                  <ImeTextarea
                     placeholder="備考"
                     value={editingFacility.remarks || ''}
                     onChange={(e) =>
@@ -2094,7 +2096,7 @@ export default function App() {
                   )}
 
                   {/* 備考欄 */}
-                  <textarea
+                  <ImeTextarea
                     value={editingEntry.remarks || ''}
                     onChange={(e) =>
                       setEditingEntry((prev) =>
@@ -2142,7 +2144,7 @@ export default function App() {
                 </button>
               </div>
               <div className="flex items-center mb-2 gap-2">
-                <input
+                <ImeInput
                   type="text"
                   placeholder="検索"
                   value={functionListSearchText}
@@ -2357,7 +2359,7 @@ export default function App() {
               </h3>
 
               {/* 機能名 */}
-              <input
+              <ImeInput
                 type="text"
                 placeholder="機能名"
                 value={newFunctionName}
@@ -2387,7 +2389,7 @@ export default function App() {
               </div>
 
               {/* 選択肢 */}
-              <textarea
+              <ImeTextarea
                 placeholder="選択肢を改行で入力"
                 value={newChoices}
                 onChange={(e) => setNewChoices(e.target.value)}
@@ -2420,7 +2422,7 @@ export default function App() {
               </div>
 
               {/* メモ */}
-              <textarea
+              <ImeTextarea
                 placeholder="メモ"
                 value={newMemo}
                 onChange={(e) => setNewMemo(e.target.value)}
