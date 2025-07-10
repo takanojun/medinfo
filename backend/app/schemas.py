@@ -209,3 +209,23 @@ class FacilityMemoUpdate(BaseModel):
     tag_ids: Optional[List[int]] = None
 
 
+class FacilityMemoVersionBase(BaseModel):
+    id: int
+    memo_id: int
+    version_no: int
+    content: Optional[str]
+    created_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+class FacilityMemoLockBase(BaseModel):
+    memo_id: int
+    locked_by: Optional[str]
+    locked_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
