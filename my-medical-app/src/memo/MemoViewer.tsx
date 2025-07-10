@@ -1,16 +1,21 @@
-import type { MemoItem } from './MemoApp';
+import type { MemoItem, MemoTag } from './MemoApp';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 
 interface Props {
   memo: MemoItem | null;
+  tagOptions: MemoTag[];
   onEdit: () => void;
   onToggleDelete: () => void;
 }
 
-export default function MemoViewer({ memo, onEdit, onToggleDelete }: Props) {
+export default function MemoViewer({ memo, tagOptions, onEdit, onToggleDelete }: Props) {
   if (!memo) return <div className="flex-1 p-4">メモを選択してください</div>;
+  const tags = memo.tag_ids
+    .map((id) => tagOptions.find((t) => t.id === id)?.name)
+    .filter(Boolean)
+    .join(', ');
   return (
     <div className="flex-1 p-4 overflow-y-auto">
       <div className="flex justify-end mb-2">
@@ -30,6 +35,7 @@ export default function MemoViewer({ memo, onEdit, onToggleDelete }: Props) {
       <div className="prose max-w-none">
         <Markdown remarkPlugins={[remarkGfm, remarkBreaks]}>{memo.content}</Markdown>
       </div>
+      {tags && <div className="mt-2 text-sm text-gray-600">タグ: {tags}</div>}
     </div>
   );
 }

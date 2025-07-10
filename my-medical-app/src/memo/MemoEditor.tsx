@@ -4,11 +4,11 @@ import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import ImeInput from '../components/ImeInput';
 import ImeTextarea from '../components/ImeTextarea';
-import type { MemoItem } from './MemoApp';
+import type { MemoItem, MemoTag } from './MemoApp';
 
 interface Props {
   memo: MemoItem;
-  tagOptions: string[];
+  tagOptions: MemoTag[];
   onSave: (m: MemoItem) => void;
   onCancel: () => void;
 }
@@ -16,10 +16,10 @@ interface Props {
 export default function MemoEditor({ memo, tagOptions, onSave, onCancel }: Props) {
   const [title, setTitle] = useState(memo.title);
   const [content, setContent] = useState(memo.content);
-  const [tags, setTags] = useState<string[]>(memo.tags);
+  const [tags, setTags] = useState<number[]>(memo.tag_ids);
 
   const handleSave = () => {
-    onSave({ ...memo, title, content, tags });
+    onSave({ ...memo, title, content, tag_ids: tags });
   };
 
   return (
@@ -40,20 +40,20 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel }: Props
             />
             <div className="border p-1 mt-2 space-y-1">
               {tagOptions.map((tag) => (
-                <label key={tag} className="block text-sm">
+                <label key={tag.id} className="block text-sm">
                   <input
                     type="checkbox"
                     className="mr-1"
-                    checked={tags.includes(tag)}
+                    checked={tags.includes(tag.id)}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setTags((prev) => [...prev, tag]);
+                        setTags((prev) => [...prev, tag.id]);
                       } else {
-                        setTags((prev) => prev.filter((t) => t !== tag));
+                        setTags((prev) => prev.filter((t) => t !== tag.id));
                       }
                     }}
                   />
-                  {tag}
+                  {tag.name}
                 </label>
               ))}
             </div>
