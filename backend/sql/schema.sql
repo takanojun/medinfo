@@ -69,6 +69,7 @@ CREATE TABLE facility_memo_versions (
     version_no INTEGER NOT NULL,
     content TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    ip_address TEXT,
     UNIQUE (memo_id, version_no)
 );
 
@@ -81,5 +82,6 @@ CREATE TABLE facility_memo_tag_links (
 CREATE TABLE facility_memo_locks (
     memo_id INTEGER PRIMARY KEY REFERENCES facility_memos(id) ON DELETE CASCADE,
     locked_by TEXT,
-    locked_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    locked_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    ip_address TEXT
 );

@@ -129,12 +129,13 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
 
   const handleEdit = (memo: MemoItem) => {
     lockMemo(memo.id)
-      .then((res) => {
+      .then(async (res) => {
         if (res.ok) {
           setEditing({ ...memo });
           setEditingReadOnly(false);
         } else {
-          alert('他のユーザーが編集中です');
+          const data = await res.json().catch(() => null);
+          alert(data?.detail || '他のユーザーが編集中です');
         }
       })
       .catch(() => alert('ロック取得に失敗しました'));
