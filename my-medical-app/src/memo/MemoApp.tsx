@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import MemoList from './MemoList';
 import MemoViewer from './MemoViewer';
 import MemoEditor from './MemoEditor';
+import VerticalSplit from '../components/VerticalSplit';
+import MemoTagManagerModal from './MemoTagManagerModal';
 
 export interface MemoItem {
   id: number;
@@ -32,17 +34,22 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
     memos.reduce((max, m) => Math.max(max, m.id), 0) + 1,
   );
   const [tagMaster, setTagMaster] = useState<MemoTag[]>([]);
+  const [isTagMasterOpen, setIsTagMasterOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [editing, setEditing] = useState<MemoItem | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
   const [search, setSearch] = useState('');
   const [tagFilter] = useState<number[]>([]);
 
-  useEffect(() => {
+  const fetchTags = useCallback(() => {
     fetch(`${apiBase}/memo-tags`)
       .then((res) => res.json())
       .then((data) => setTagMaster(data));
   }, []);
+
+  useEffect(() => {
+    fetchTags();
+  }, [fetchTags]);
 
   const filtered = memos.filter((m) => {
     if (!showDeleted && m.deleted) return false;
@@ -87,32 +94,46 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
         {facilityName ? `${facilityName} メモ管理` : 'メモ管理'}
         {facilityId ? ` (ID: ${facilityId})` : ''}
       </header>
-      <div className="flex flex-1 overflow-hidden">
-        <MemoList
-          memos={filtered}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-          showDeleted={showDeleted}
-          onToggleDeleted={() => setShowDeleted((v) => !v)}
-          search={search}
-          onSearch={setSearch}
-          onCreate={handleCreate}
-        />
-        <MemoViewer
-          memo={selected}
-          tagOptions={tagMaster}
-          onEdit={() => selected && handleEdit(selected)}
-          onToggleDelete={() => selected && handleToggleDelete(selected.id)}
-        />
-      </div>
+      <VerticalSplit
+        storageKey="memo_list_width"
+        initialLeftWidth={300}
+        left={
+          <MemoList
+            memos={filtered}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            showDeleted={showDeleted}
+            onToggleDeleted={() => setShowDeleted((v) => !v)}
+            search={search}
+            onSearch={setSearch}
+            onCreate={handleCreate}
+          />
+        }
+        right={
+          <MemoViewer
+            memo={selected}
+            tagOptions={tagMaster}
+            onEdit={() => selected && handleEdit(selected)}
+            onToggleDelete={() => selected && handleToggleDelete(selected.id)}
+          />
+        }
+      />
       {editing && (
         <MemoEditor
           memo={editing}
           tagOptions={tagMaster}
           onSave={handleSave}
           onCancel={() => setEditing(null)}
+          onOpenTagMaster={() => setIsTagMasterOpen(true)}
         />
       )}
+      <MemoTagManagerModal
+        isOpen={isTagMasterOpen}
+        onClose={() => {
+          setIsTagMasterOpen(false);
+          fetchTags();
+        }}
+      />
     </div>
   );
 }
