@@ -1462,6 +1462,18 @@ export default function App() {
           <button
             className="block px-4 py-2 hover:bg-gray-100"
             onClick={() => {
+              const url = `/memo.html?facilityId=${rowContextMenu.facility.id}&facilityName=${encodeURIComponent(
+                rowContextMenu.facility.short_name,
+              )}`;
+              window.open(url, '_blank');
+              setRowContextMenu(null);
+            }}
+          >
+            医療機関メモ起動
+          </button>
+          <button
+            className="block px-4 py-2 hover:bg-gray-100"
+            onClick={() => {
               handleHideFacility(rowContextMenu.facility.id);
               setRowContextMenu(null);
             }}

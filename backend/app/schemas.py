@@ -155,3 +155,57 @@ class FunctionCategoryUpdate(BaseModel):
             raise ValueError("カテゴリ名が未入力のため登録できません")
         return v
 
+
+class MemoTagBase(BaseModel):
+    id: int
+    name: str
+    remark: Optional[str]
+    is_deleted: bool
+
+    class Config:
+        from_attributes = True
+
+
+class MemoTagCreate(BaseModel):
+    name: str
+    remark: Optional[str] = None
+
+    @validator("name")
+    def validate_name(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("タグ名が未入力のため登録できません")
+        return v
+
+
+class FacilityMemoBase(BaseModel):
+    id: int
+    facility_id: int
+    title: str
+    content: Optional[str]
+    is_deleted: bool
+    updated_at: Optional[str]
+    tags: List[MemoTagBase] = []
+
+    class Config:
+        from_attributes = True
+
+
+class FacilityMemoCreate(BaseModel):
+    facility_id: int
+    title: str
+    content: Optional[str] = None
+    tag_ids: List[int] = []
+
+    @validator("title")
+    def validate_title(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("タイトルが未入力のため登録できません")
+        return v
+
+
+class FacilityMemoUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    tag_ids: Optional[List[int]] = None
+
+
