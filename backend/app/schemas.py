@@ -1,5 +1,6 @@
 from pydantic import BaseModel, validator
 from typing import Optional, List
+from datetime import datetime
 
 
 class ContactInfo(BaseModel):
@@ -183,7 +184,7 @@ class FacilityMemoBase(BaseModel):
     title: str
     content: Optional[str]
     is_deleted: bool
-    updated_at: Optional[str]
+    updated_at: Optional[datetime]
     tags: List[MemoTagBase] = []
 
     class Config:
@@ -191,10 +192,9 @@ class FacilityMemoBase(BaseModel):
 
 
 class FacilityMemoCreate(BaseModel):
-    facility_id: int
     title: str
     content: Optional[str] = None
-    tag_ids: List[int] = []
+    tag_ids: Optional[List[int]] = None
 
     @validator("title")
     def validate_title(cls, v: str) -> str:

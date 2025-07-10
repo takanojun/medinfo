@@ -29,7 +29,7 @@ def create_memo(facility_id: int, memo: schemas.FacilityMemoCreate, db: Session 
     db.add(db_memo)
     db.commit()
     db.refresh(db_memo)
-    for tag_id in memo.tag_ids:
+    for tag_id in memo.tag_ids or []:
         db.add(models.FacilityMemoTagLink(memo_id=db_memo.id, tag_id=tag_id))
     db.commit()
     db.refresh(db_memo)
