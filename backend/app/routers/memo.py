@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
+from datetime import datetime, timedelta
 from .. import database, schemas, models
 
 router = APIRouter(prefix="/memos", tags=["memos"])
@@ -90,3 +91,87 @@ def restore_memo(memo_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_memo)
     return db_memo
+
+
+@router.get("/{memo_id}/versions", response_model=List[schemas.FacilityMemoVersionBase])
+def get_versions(memo_id: int, db: Session = Depends(get_db)):
+    versions = (
+        db.query(models.FacilityMemoVersion)
+        .filter(models.FacilityMemoVersion.memo_id == memo_id)
+        .order_by(models.FacilityMemoVersion.version_no.desc())
+        .all()
+    )
+    return versions
+
+
+@router.post("/{memo_id}/versions/{version_no}/restore", response_model=schemas.FacilityMemoBase)
+def restore_version(memo_id: int, version_no: int, db: Session = Depends(get_db)):
+    memo = db.query(models.FacilityMemo).filter(models.FacilityMemo.id == memo_id).first()
+    if not memo:
+        raise HTTPException(status_code=404, detail="Memo not found")
+    version = (
+        db.query(models.FacilityMemoVersion)
+        .filter(models.FacilityMemoVersion.memo_id == memo_id,
+                models.FacilityMemoVersion.version_no == version_no)
+        .first()
+    )
+    if not version:
+        raise HTTPException(status_code=404, detail="Version not found")
+    latest = (
+        db.query(models.FacilityMemoVersion)
+        .filter(models.FacilityMemoVersion.memo_id == memo_id)
+        .order_by(models.FacilityMemoVersion.version_no.desc())
+        .first()
+    )
+    next_no = latest.version_no + 1 if latest else 1
+    db.add(models.FacilityMemoVersion(memo_id=memo_id, version_no=next_no, content=memo.content))
+    memo.content = version.content
+    db.commit()
+    db.refresh(memo)
+    return memo
+
+
+LOCK_TIMEOUT = timedelta(minutes=5)
+
+
+@router.get("/{memo_id}/lock", response_model=Optional[schemas.FacilityMemoLockBase])
+def get_lock(memo_id: int, db: Session = Depends(get_db)):
+    return (
+        db.query(models.FacilityMemoLock)
+        .filter(models.FacilityMemoLock.memo_id == memo_id)
+        .first()
+    )
+
+
+@router.post("/{memo_id}/lock", response_model=schemas.FacilityMemoLockBase)
+def lock_memo(memo_id: int, user: str, db: Session = Depends(get_db)):
+    now = datetime.utcnow()
+    lock = (
+        db.query(models.FacilityMemoLock)
+        .filter(models.FacilityMemoLock.memo_id == memo_id)
+        .first()
+    )
+    if lock and lock.locked_by != user and lock.locked_at and lock.locked_at > now - LOCK_TIMEOUT:
+        raise HTTPException(status_code=409, detail="locked")
+    if not lock:
+        lock = models.FacilityMemoLock(memo_id=memo_id, locked_by=user, locked_at=now)
+        db.add(lock)
+    else:
+        lock.locked_by = user
+        lock.locked_at = now
+    db.commit()
+    db.refresh(lock)
+    return lock
+
+
+@router.delete("/{memo_id}/lock", response_model=dict)
+def unlock_memo(memo_id: int, user: str, db: Session = Depends(get_db)):
+    lock = (
+        db.query(models.FacilityMemoLock)
+        .filter(models.FacilityMemoLock.memo_id == memo_id)
+        .first()
+    )
+    if lock and lock.locked_by == user:
+        db.delete(lock)
+        db.commit()
+    return {"message": "unlocked"}

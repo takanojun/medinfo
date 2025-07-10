@@ -4,6 +4,7 @@ import MemoViewer from './MemoViewer';
 import MemoEditor from './MemoEditor';
 import VerticalSplit from '../components/VerticalSplit';
 import MemoTagManagerModal from './MemoTagManagerModal';
+import MemoHistoryModal from './MemoHistoryModal';
 
 export interface MemoItem {
   id: number;
@@ -31,6 +32,7 @@ interface FacilityMemoResponse {
 
 const initialMemos: MemoItem[] = [];
 const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+const currentUser = 'user1';
 
 const getCookie = (name: string): string | null => {
   const match = document.cookie
@@ -57,6 +59,7 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
   const [showDeleted, setShowDeleted] = useState(false);
   const [search, setSearch] = useState('');
   const [tagFilter, setTagFilter] = useState<number[]>([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const fetchTags = useCallback(() => {
     fetch(`${apiBase}/memo-tags`)
@@ -97,6 +100,12 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
       });
   }, [facilityId]);
 
+  const lockMemo = (id: number) =>
+    fetch(`${apiBase}/memos/${id}/lock?user=${currentUser}`, { method: 'POST' });
+
+  const unlockMemo = (id: number) =>
+    fetch(`${apiBase}/memos/${id}/lock?user=${currentUser}`, { method: 'DELETE' });
+
   useEffect(() => {
     fetchTags();
     fetchMemos();
@@ -117,7 +126,15 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
   };
 
   const handleEdit = (memo: MemoItem) => {
-    setEditing({ ...memo });
+    lockMemo(memo.id)
+      .then((res) => {
+        if (res.ok) {
+          setEditing({ ...memo });
+        } else {
+          alert('他のユーザーが編集中です');
+        }
+      })
+      .catch(() => alert('ロック取得に失敗しました'));
   };
 
   const handleSave = (memo: MemoItem) => {
@@ -140,6 +157,7 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
         fetchMemos();
         setSelectedId(data.id);
         setEditing(null);
+        if (memo.id !== 0) unlockMemo(memo.id);
       });
   };
 
@@ -151,6 +169,17 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
       : `${apiBase}/memos/${id}`;
     const method = memo.deleted ? 'PUT' : 'DELETE';
     fetch(url, { method }).then(fetchMemos);
+  };
+
+  const handleRestoreVersion = (no: number) => {
+    if (!selected) return;
+    fetch(`${apiBase}/memos/${selected.id}/versions/${no}/restore`, { method: 'POST' })
+      .then((res) => res.json())
+      .then((data) => {
+        fetchMemos();
+        setSelectedId(data.id);
+        setIsHistoryOpen(false);
+      });
   };
 
   return (
@@ -183,6 +212,7 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
             tagOptions={tagMaster}
             onEdit={() => selected && handleEdit(selected)}
             onToggleDelete={() => selected && handleToggleDelete(selected.id)}
+            onShowHistory={() => setIsHistoryOpen(true)}
           />
         }
       />
@@ -191,7 +221,10 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
           memo={editing}
           tagOptions={tagMaster}
           onSave={handleSave}
-          onCancel={() => setEditing(null)}
+          onCancel={() => {
+            if (editing.id !== 0) unlockMemo(editing.id);
+            setEditing(null);
+          }}
           onOpenTagMaster={() => setIsTagMasterOpen(true)}
         />
       )}
@@ -202,6 +235,14 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
           fetchTags();
         }}
       />
+      {selected && (
+        <MemoHistoryModal
+          memoId={selected.id}
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          onRestore={handleRestoreVersion}
+        />
+      )}
     </div>
   );
 }
