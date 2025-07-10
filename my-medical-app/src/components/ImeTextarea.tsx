@@ -3,7 +3,7 @@ import React, { forwardRef } from 'react';
 type Props = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
 
 const ImeTextarea = forwardRef<HTMLTextAreaElement, Props>((props, ref) => (
-  <textarea lang="ja" inputMode="kana" {...props} ref={ref} />
+  <textarea lang="ja" inputMode={"kana" as any} {...props} ref={ref} />
 ));
 
 ImeTextarea.displayName = 'ImeTextarea';
