@@ -9,6 +9,7 @@ interface Props {
   onToggleDeleted: () => void;
   search: string;
   onSearch: (v: string) => void;
+  onCreate: () => void;
 }
 
 export default function MemoList({
@@ -19,6 +20,7 @@ export default function MemoList({
   onToggleDeleted,
   search,
   onSearch,
+  onCreate,
 }: Props) {
   return (
     <div className="w-1/3 border-r overflow-y-auto p-2 space-y-2">
@@ -40,7 +42,10 @@ export default function MemoList({
           削除済み
         </label>
       </div>
-      <button className="bg-blue-500 text-white px-2 py-1 rounded w-full mb-2">
+      <button
+        className="bg-blue-500 text-white px-2 py-1 rounded w-full mb-2"
+        onClick={onCreate}
+      >
         ＋新規作成
       </button>
       <ul className="space-y-1">
