@@ -17,6 +17,7 @@ const setCookie = (name: string, value: string) => {
 
 export default function MemoTagManager() {
   const [tags, setTags] = useState<MemoTag[]>([]);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [name, setName] = useState('');
   const [remark, setRemark] = useState('');
   const [editing, setEditing] = useState<MemoTag | null>(null);
@@ -88,13 +89,13 @@ export default function MemoTagManager() {
     setCookie('memoTagOrder', newTags.map((t) => t.id).join(','));
   };
 
-  const moveTag = (index: number, offset: number) => {
-    const newIndex = index + offset;
-    if (newIndex < 0 || newIndex >= tags.length) return;
+  const handleDrop = (index: number) => {
+    if (dragIndex === null) return;
     const newTags = [...tags];
-    const [moved] = newTags.splice(index, 1);
-    newTags.splice(newIndex, 0, moved);
+    const [moved] = newTags.splice(dragIndex, 1);
+    newTags.splice(index, 0, moved);
     updateOrder(newTags);
+    setDragIndex(null);
   };
 
   return (
@@ -133,7 +134,14 @@ export default function MemoTagManager() {
         </thead>
         <tbody>
           {tags.map((tag, idx) => (
-            <tr key={tag.id} className="border">
+            <tr
+              key={tag.id}
+              className="border hover:bg-gray-50 cursor-move"
+              draggable
+              onDragStart={() => setDragIndex(idx)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => handleDrop(idx)}
+            >
               <td className="border p-1 text-center">{tag.id}</td>
               <td className="border p-1">{tag.name}</td>
               <td className="border p-1">{tag.remark}</td>
@@ -150,20 +158,6 @@ export default function MemoTagManager() {
                     削除
                   </button>
                 )}
-                <button
-                  className="px-1 bg-gray-200"
-                  onClick={() => moveTag(idx, -1)}
-                  disabled={idx === 0}
-                >
-                  ▲
-                </button>
-                <button
-                  className="px-1 bg-gray-200"
-                  onClick={() => moveTag(idx, 1)}
-                  disabled={idx === tags.length - 1}
-                >
-                  ▼
-                </button>
               </td>
             </tr>
           ))}
