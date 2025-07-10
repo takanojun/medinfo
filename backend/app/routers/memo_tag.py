@@ -19,7 +19,7 @@ def read_tags(include_deleted: bool = False, db: Session = Depends(get_db)):
     query = db.query(models.MemoTag)
     if not include_deleted:
         query = query.filter(models.MemoTag.is_deleted == False)
-    return query.all()
+    return query.order_by(models.MemoTag.name, models.MemoTag.id).all()
 
 
 @router.post("", response_model=schemas.MemoTagBase)
@@ -41,6 +41,8 @@ def update_tag(tag_id: int, tag: schemas.MemoTagCreate, db: Session = Depends(ge
     db.commit()
     db.refresh(db_tag)
     return db_tag
+
+
 
 
 @router.delete("/{tag_id}", response_model=dict)

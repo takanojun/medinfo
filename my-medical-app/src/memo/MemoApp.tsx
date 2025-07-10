@@ -32,6 +32,17 @@ interface FacilityMemoResponse {
 const initialMemos: MemoItem[] = [];
 const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
+const getCookie = (name: string): string | null => {
+  const match = document.cookie
+    .split('; ')
+    .find((row) => row.startsWith(`${name}=`));
+  return match ? decodeURIComponent(match.split('=')[1]) : null;
+};
+
+const setCookie = (name: string, value: string) => {
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=31536000`;
+};
+
 interface Props {
   facilityId: number
   facilityName: string
@@ -50,7 +61,24 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
   const fetchTags = useCallback(() => {
     fetch(`${apiBase}/memo-tags`)
       .then((res) => res.json())
-      .then((data) => setTagMaster(data));
+      .then((data: MemoTag[]) => {
+        const sorted = data.slice().sort((a, b) => a.name.localeCompare(b.name));
+        const saved = getCookie('memoTagOrder');
+        let order = sorted.map((t) => t.id);
+        if (saved) {
+          const parsed = saved
+            .split(',')
+            .map((v) => parseInt(v))
+            .filter((id) => sorted.some((t) => t.id === id));
+          const missing = sorted.map((t) => t.id).filter((id) => !parsed.includes(id));
+          order = [...parsed, ...missing];
+        }
+        const ordered = order
+          .map((id) => sorted.find((t) => t.id === id)!)
+          .filter(Boolean) as MemoTag[];
+        setTagMaster(ordered);
+        setCookie('memoTagOrder', order.join(','));
+      });
   }, []);
 
   const fetchMemos = useCallback(() => {

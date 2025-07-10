@@ -4,6 +4,17 @@ import type { MemoTag } from './MemoApp';
 
 const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
+const getCookie = (name: string): string | null => {
+  const m = document.cookie
+    .split('; ')
+    .find((row) => row.startsWith(`${name}=`));
+  return m ? decodeURIComponent(m.split('=')[1]) : null;
+};
+
+const setCookie = (name: string, value: string) => {
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=31536000`;
+};
+
 export default function MemoTagManager() {
   const [tags, setTags] = useState<MemoTag[]>([]);
   const [name, setName] = useState('');
@@ -13,7 +24,24 @@ export default function MemoTagManager() {
   const fetchTags = () => {
     fetch(`${apiBase}/memo-tags?include_deleted=true`)
       .then((res) => res.json())
-      .then((data) => setTags(data));
+      .then((data: MemoTag[]) => {
+        const sorted = data.slice().sort((a, b) => a.name.localeCompare(b.name));
+        const saved = getCookie('memoTagOrder');
+        let order = sorted.map((t) => t.id);
+        if (saved) {
+          const parsed = saved
+            .split(',')
+            .map((v) => parseInt(v))
+            .filter((id) => sorted.some((t) => t.id === id));
+          const missing = sorted.map((t) => t.id).filter((id) => !parsed.includes(id));
+          order = [...parsed, ...missing];
+        }
+        const ordered = order
+          .map((id) => sorted.find((t) => t.id === id)!)
+          .filter(Boolean) as MemoTag[];
+        setTags(ordered);
+        setCookie('memoTagOrder', order.join(','));
+      });
   };
 
   useEffect(() => {
@@ -55,6 +83,20 @@ export default function MemoTagManager() {
     setRemark('');
   };
 
+  const updateOrder = (newTags: MemoTag[]) => {
+    setTags(newTags);
+    setCookie('memoTagOrder', newTags.map((t) => t.id).join(','));
+  };
+
+  const moveTag = (index: number, offset: number) => {
+    const newIndex = index + offset;
+    if (newIndex < 0 || newIndex >= tags.length) return;
+    const newTags = [...tags];
+    const [moved] = newTags.splice(index, 1);
+    newTags.splice(newIndex, 0, moved);
+    updateOrder(newTags);
+  };
+
   return (
     <div className="p-4 space-y-4">
       <h1 className="text-xl font-bold">タグマスタ保守</h1>
@@ -90,7 +132,7 @@ export default function MemoTagManager() {
           </tr>
         </thead>
         <tbody>
-          {tags.map((tag) => (
+          {tags.map((tag, idx) => (
             <tr key={tag.id} className="border">
               <td className="border p-1 text-center">{tag.id}</td>
               <td className="border p-1">{tag.name}</td>
@@ -108,6 +150,20 @@ export default function MemoTagManager() {
                     削除
                   </button>
                 )}
+                <button
+                  className="px-1 bg-gray-200"
+                  onClick={() => moveTag(idx, -1)}
+                  disabled={idx === 0}
+                >
+                  ▲
+                </button>
+                <button
+                  className="px-1 bg-gray-200"
+                  onClick={() => moveTag(idx, 1)}
+                  disabled={idx === tags.length - 1}
+                >
+                  ▼
+                </button>
               </td>
             </tr>
           ))}
