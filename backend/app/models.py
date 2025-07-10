@@ -1,6 +1,18 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, ARRAY, CheckConstraint, Boolean, JSON, TIMESTAMP
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    ForeignKey,
+    ARRAY,
+    CheckConstraint,
+    Boolean,
+    JSON,
+    TIMESTAMP,
+)
 from sqlalchemy.orm import relationship
 from .database import Base
+
 
 # 機能カテゴリテーブル
 class FunctionCategory(Base):
@@ -12,6 +24,7 @@ class FunctionCategory(Base):
     is_deleted = Column(Boolean, default=False)
 
     functions = relationship("Function", back_populates="category")
+
 
 # 医療機関テーブル
 class MedicalFacility(Base):
@@ -30,7 +43,10 @@ class MedicalFacility(Base):
     is_deleted = Column(Boolean, default=False)
 
     # 関連する機能情報をリレーションで持たせる
-    functions = relationship("FacilityFunctionEntry", back_populates="facility", cascade="all, delete-orphan")
+    functions = relationship(
+        "FacilityFunctionEntry", back_populates="facility", cascade="all, delete-orphan"
+    )
+
 
 # 機能マスタテーブル
 class Function(Base):
@@ -40,14 +56,19 @@ class Function(Base):
     name = Column(Text, nullable=False)
     description = Column(Text)
     memo = Column(Text)
-    selection_type = Column(Text, CheckConstraint("selection_type IN ('single', 'multiple')"))
+    selection_type = Column(
+        Text, CheckConstraint("selection_type IN ('single', 'multiple')")
+    )
     choices = Column(ARRAY(Text))
     category_id = Column(Integer, ForeignKey("function_categories.id"))
     is_deleted = Column(Boolean, default=False)
 
     category = relationship("FunctionCategory", back_populates="functions")
     # 機能エントリ（中間テーブル）側からの逆参照
-    entries = relationship("FacilityFunctionEntry", back_populates="function", cascade="all, delete-orphan")
+    entries = relationship(
+        "FacilityFunctionEntry", back_populates="function", cascade="all, delete-orphan"
+    )
+
 
 # 中間テーブル：施設と機能の紐づけ
 class FacilityFunctionEntry(Base):
@@ -63,6 +84,7 @@ class FacilityFunctionEntry(Base):
     facility = relationship("MedicalFacility", back_populates="functions")
     # リレーション：機能
     function = relationship("Function", back_populates="entries")
+
 
 # メモタグマスタ
 class MemoTag(Base):
@@ -118,6 +140,7 @@ class FacilityMemoVersion(Base):
     version_no = Column(Integer, nullable=False)
     content = Column(Text)
     created_at = Column(TIMESTAMP, server_default="now()")
+    ip_address = Column(Text)
 
     memo = relationship("FacilityMemo", back_populates="versions")
 
@@ -125,15 +148,20 @@ class FacilityMemoVersion(Base):
 class FacilityMemoTagLink(Base):
     __tablename__ = "facility_memo_tag_links"
 
-    memo_id = Column(Integer, ForeignKey("facility_memos.id", ondelete="CASCADE"), primary_key=True)
+    memo_id = Column(
+        Integer, ForeignKey("facility_memos.id", ondelete="CASCADE"), primary_key=True
+    )
     tag_id = Column(Integer, ForeignKey("memo_tags.id"), primary_key=True)
 
 
 class FacilityMemoLock(Base):
     __tablename__ = "facility_memo_locks"
 
-    memo_id = Column(Integer, ForeignKey("facility_memos.id", ondelete="CASCADE"), primary_key=True)
+    memo_id = Column(
+        Integer, ForeignKey("facility_memos.id", ondelete="CASCADE"), primary_key=True
+    )
     locked_by = Column(Text)
     locked_at = Column(TIMESTAMP, server_default="now()")
+    ip_address = Column(Text)
 
     memo = relationship("FacilityMemo", back_populates="lock")
