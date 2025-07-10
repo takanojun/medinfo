@@ -10,6 +10,7 @@ interface Props {
   search: string;
   onSearch: (v: string) => void;
   onCreate: () => void;
+  className?: string;
 }
 
 export default function MemoList({
@@ -21,9 +22,10 @@ export default function MemoList({
   search,
   onSearch,
   onCreate,
+  className = '',
 }: Props) {
   return (
-    <div className="w-1/3 border-r overflow-y-auto p-2 space-y-2">
+    <div className={`overflow-y-auto p-2 space-y-2 ${className}`}>
       <div className="flex items-center justify-between mb-2">
         <ImeInput
           type="text"

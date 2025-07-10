@@ -11,9 +11,10 @@ interface Props {
   tagOptions: MemoTag[];
   onSave: (m: MemoItem) => void;
   onCancel: () => void;
+  onOpenTagMaster: () => void;
 }
 
-export default function MemoEditor({ memo, tagOptions, onSave, onCancel }: Props) {
+export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenTagMaster }: Props) {
   const [title, setTitle] = useState(memo.title);
   const [content, setContent] = useState(memo.content);
   const [tags, setTags] = useState<number[]>(memo.tag_ids);
@@ -21,6 +22,7 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel }: Props
   const handleSave = () => {
     onSave({ ...memo, title, content, tag_ids: tags });
   };
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
@@ -38,7 +40,14 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel }: Props
               onChange={(e) => setContent(e.target.value)}
               className="border p-1 flex-1"
             />
-            <div className="border p-1 mt-2 space-y-1">
+            <div className="border p-1 mt-2 space-y-1 relative pr-20">
+              <button
+                type="button"
+                className="absolute top-1 right-1 bg-blue-500 text-white text-xs px-2 py-1 rounded"
+                onClick={onOpenTagMaster}
+              >
+                タグ管理
+              </button>
               {tagOptions.map((tag) => (
                 <label key={tag.id} className="block text-sm">
                   <input
