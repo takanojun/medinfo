@@ -56,6 +56,7 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
   const [isTagMasterOpen, setIsTagMasterOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [editing, setEditing] = useState<MemoItem | null>(null);
+  const [editingReadOnly, setEditingReadOnly] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
   const [search, setSearch] = useState('');
   const [tagFilter, setTagFilter] = useState<number[]>([]);
@@ -123,6 +124,7 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
   const handleCreate = () => {
     const memo: MemoItem = { id: 0, title: '', content: '', tag_ids: [] };
     setEditing(memo);
+    setEditingReadOnly(false);
   };
 
   const handleEdit = (memo: MemoItem) => {
@@ -130,6 +132,7 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
       .then((res) => {
         if (res.ok) {
           setEditing({ ...memo });
+          setEditingReadOnly(false);
         } else {
           alert('他のユーザーが編集中です');
         }
@@ -182,6 +185,13 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
       });
   };
 
+  const handleViewVersion = (v: { version_no: number; content: string | null }) => {
+    if (!selected) return;
+    setEditing({ ...selected, content: v.content || '' });
+    setEditingReadOnly(true);
+    setIsHistoryOpen(false);
+  };
+
   return (
     <div className="flex flex-col h-screen">
       <header className="bg-blue-600 text-white p-2">
@@ -222,10 +232,12 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
           tagOptions={tagMaster}
           onSave={handleSave}
           onCancel={() => {
-            if (editing.id !== 0) unlockMemo(editing.id);
+            if (!editingReadOnly && editing.id !== 0) unlockMemo(editing.id);
             setEditing(null);
+            setEditingReadOnly(false);
           }}
           onOpenTagMaster={() => setIsTagMasterOpen(true)}
+          readOnly={editingReadOnly}
         />
       )}
       <MemoTagManagerModal
@@ -241,6 +253,7 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
           isOpen={isHistoryOpen}
           onClose={() => setIsHistoryOpen(false)}
           onRestore={handleRestoreVersion}
+          onView={handleViewVersion}
         />
       )}
     </div>

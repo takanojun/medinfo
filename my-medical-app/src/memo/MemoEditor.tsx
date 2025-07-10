@@ -14,9 +14,10 @@ interface Props {
   onSave: (m: MemoItem) => void;
   onCancel: () => void;
   onOpenTagMaster: () => void;
+  readOnly?: boolean;
 }
 
-export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenTagMaster }: Props) {
+export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenTagMaster, readOnly = false }: Props) {
   const [title, setTitle] = useState(memo.title);
   const [content, setContent] = useState(memo.content);
   const [tags, setTags] = useState<number[]>(memo.tag_ids);
@@ -24,6 +25,7 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
   const options: Option[] = tagOptions.map((t) => ({ value: t.id, label: t.name }));
 
   const handleSave = () => {
+    if (readOnly) return;
     onSave({ ...memo, title, content, tag_ids: tags });
   };
 
@@ -38,25 +40,30 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
               onChange={(e) => setTitle(e.target.value)}
               placeholder="タイトル"
               className="border p-1 mb-2"
+              disabled={readOnly}
             />
             <ImeTextarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="border p-1 flex-1"
+              disabled={readOnly}
             />
             <div className="border p-1 mt-2 space-y-1 relative pr-20">
-              <button
-                type="button"
-                className="absolute top-1 right-1 bg-blue-500 text-white text-xs px-2 py-1 rounded"
-                onClick={onOpenTagMaster}
-              >
-                タグ管理
-              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  className="absolute top-1 right-1 bg-blue-500 text-white text-xs px-2 py-1 rounded"
+                  onClick={onOpenTagMaster}
+                >
+                  タグ管理
+                </button>
+              )}
               <MultiSelect
                 options={options}
                 selected={tags}
                 onChange={setTags}
                 placeholder="タグを選択"
+                disabled={readOnly}
               />
             </div>
           </div>
@@ -68,11 +75,13 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
         </div>
         <div className="flex justify-end mt-2 space-x-2">
           <button className="px-3 py-1 bg-gray-300 rounded" onClick={onCancel}>
-            キャンセル
+            {readOnly ? '閉じる' : 'キャンセル'}
           </button>
-          <button className="px-3 py-1 bg-blue-500 text-white rounded" onClick={handleSave}>
-            保存
-          </button>
+          {!readOnly && (
+            <button className="px-3 py-1 bg-blue-500 text-white rounded" onClick={handleSave}>
+              保存
+            </button>
+          )}
         </div>
       </div>
     </div>

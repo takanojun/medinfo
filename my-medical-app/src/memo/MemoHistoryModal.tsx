@@ -14,11 +14,12 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onRestore: (versionNo: number) => void;
+  onView: (version: Version) => void;
 }
 
 const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
-export default function MemoHistoryModal({ memoId, isOpen, onClose, onRestore }: Props) {
+export default function MemoHistoryModal({ memoId, isOpen, onClose, onRestore, onView }: Props) {
   const [versions, setVersions] = useState<Version[]>([]);
 
   useEffect(() => {
@@ -37,16 +38,24 @@ export default function MemoHistoryModal({ memoId, isOpen, onClose, onRestore }:
             <Dialog.Title className="text-lg font-bold mb-2">履歴</Dialog.Title>
             <ul className="space-y-2 max-h-80 overflow-y-auto">
               {versions.map((v) => (
-                <li key={v.id} className="border p-2 flex justify-between items-center">
+                <li key={v.id} className="border p-2 flex justify-between items-center gap-2">
                   <span>
                     {`#${v.version_no}`} {new Date(v.created_at).toLocaleString()}
                   </span>
-                  <button
-                    className="px-2 py-1 bg-blue-500 text-white text-sm rounded"
-                    onClick={() => onRestore(v.version_no)}
-                  >
-                    復元
-                  </button>
+                  <div className="space-x-2">
+                    <button
+                      className="px-2 py-1 bg-green-500 text-white text-sm rounded"
+                      onClick={() => onView(v)}
+                    >
+                      表示
+                    </button>
+                    <button
+                      className="px-2 py-1 bg-blue-500 text-white text-sm rounded"
+                      onClick={() => onRestore(v.version_no)}
+                    >
+                      復元
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
