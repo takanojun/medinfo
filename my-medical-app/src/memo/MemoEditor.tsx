@@ -4,7 +4,8 @@ import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import ImeInput from '../components/ImeInput';
 import ImeTextarea from '../components/ImeTextarea';
-import MultiSelect, { Option } from '../components/MultiSelect';
+import MultiSelect from '../components/MultiSelect';
+import type { Option } from '../components/MultiSelect';
 import type { MemoItem, MemoTag } from './MemoApp';
 
 interface Props {
