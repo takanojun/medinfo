@@ -12,6 +12,7 @@ interface Props {
   onChange: (values: number[]) => void;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 export default function MultiSelect({
@@ -20,10 +21,12 @@ export default function MultiSelect({
   onChange,
   placeholder = '選択...',
   className = '',
+  disabled = false,
 }: Props) {
   const [open, setOpen] = useState(false);
 
   const toggleValue = (value: number) => {
+    if (disabled) return;
     if (selected.includes(value)) {
       onChange(selected.filter((v) => v !== value));
     } else {
@@ -36,12 +39,12 @@ export default function MultiSelect({
     .filter(Boolean);
 
   return (
-    <Listbox value={selected} onChange={onChange} multiple>
+    <Listbox value={selected} onChange={onChange} multiple disabled={disabled}>
       {() => (
         <div className={`relative ${className}`}>
           <Listbox.Button
-            onClick={() => setOpen((o) => !o)}
-            className="w-full border rounded px-2 py-1 text-left"
+            onClick={() => !disabled && setOpen((o) => !o)}
+            className={`w-full border rounded px-2 py-1 text-left ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
           >
             {selectedLabels.length ? (
               <div className="flex flex-wrap gap-1">
