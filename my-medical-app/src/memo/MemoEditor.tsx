@@ -31,7 +31,7 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
 
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-[70]">
       <div className="bg-white w-11/12 max-w-3xl p-4 rounded shadow flex flex-col h-[80%]">
         <div className="flex-1 flex flex-col md:flex-row gap-4">
           <div className="flex-1 flex flex-col">

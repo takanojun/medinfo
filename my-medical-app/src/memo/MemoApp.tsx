@@ -189,7 +189,6 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
     if (!selected) return;
     setEditing({ ...selected, content: v.content || '' });
     setEditingReadOnly(true);
-    setIsHistoryOpen(false);
   };
 
   return (
