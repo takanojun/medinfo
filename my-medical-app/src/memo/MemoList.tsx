@@ -1,6 +1,7 @@
 import type { MemoItem } from './MemoApp';
 import ImeInput from '../components/ImeInput';
-import MultiSelect, { Option } from '../components/MultiSelect';
+import MultiSelect from '../components/MultiSelect';
+import type { Option } from '../components/MultiSelect';
 import type { MemoTag } from './MemoApp';
 
 interface Props {
