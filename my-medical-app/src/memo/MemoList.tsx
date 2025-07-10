@@ -1,5 +1,7 @@
 import type { MemoItem } from './MemoApp';
 import ImeInput from '../components/ImeInput';
+import MultiSelect, { Option } from '../components/MultiSelect';
+import type { MemoTag } from './MemoApp';
 
 interface Props {
   memos: MemoItem[];
@@ -9,6 +11,9 @@ interface Props {
   onToggleDeleted: () => void;
   search: string;
   onSearch: (v: string) => void;
+  tagOptions: MemoTag[];
+  tagFilter: number[];
+  onTagFilterChange: (v: number[]) => void;
   onCreate: () => void;
   className?: string;
 }
@@ -21,9 +26,13 @@ export default function MemoList({
   onToggleDeleted,
   search,
   onSearch,
+  tagOptions,
+  tagFilter,
+  onTagFilterChange,
   onCreate,
   className = '',
 }: Props) {
+  const options: Option[] = tagOptions.map((t) => ({ value: t.id, label: t.name }));
   return (
     <div className={`overflow-y-auto p-2 space-y-2 ${className}`}>
       <div className="flex items-center justify-between mb-2">
@@ -44,6 +53,13 @@ export default function MemoList({
           削除済み
         </label>
       </div>
+      <MultiSelect
+        options={options}
+        selected={tagFilter}
+        onChange={onTagFilterChange}
+        placeholder="タグで絞り込み"
+        className="mb-2"
+      />
       <button
         className="bg-blue-500 text-white px-2 py-1 rounded w-full mb-2"
         onClick={onCreate}

@@ -39,7 +39,7 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
   const [editing, setEditing] = useState<MemoItem | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
   const [search, setSearch] = useState('');
-  const [tagFilter] = useState<number[]>([]);
+  const [tagFilter, setTagFilter] = useState<number[]>([]);
 
   const fetchTags = useCallback(() => {
     fetch(`${apiBase}/memo-tags`)
@@ -106,6 +106,9 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
             onToggleDeleted={() => setShowDeleted((v) => !v)}
             search={search}
             onSearch={setSearch}
+            tagOptions={tagMaster}
+            tagFilter={tagFilter}
+            onTagFilterChange={setTagFilter}
             onCreate={handleCreate}
           />
         }
