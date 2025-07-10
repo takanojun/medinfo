@@ -12,6 +12,7 @@ export interface MemoItem {
 }
 
 const initialMemos: MemoItem[] = [];
+const tagMaster = ['重要', '診察', 'TODO'];
 
 interface Props {
   facilityId: number
@@ -92,6 +93,7 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
       {editing && (
         <MemoEditor
           memo={editing}
+          tagOptions={tagMaster}
           onSave={handleSave}
           onCancel={() => setEditing(null)}
         />

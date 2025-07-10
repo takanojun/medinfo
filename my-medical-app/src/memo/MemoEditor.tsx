@@ -1,26 +1,25 @@
 import { useState } from 'react';
 import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import ImeInput from '../components/ImeInput';
 import ImeTextarea from '../components/ImeTextarea';
 import type { MemoItem } from './MemoApp';
 
 interface Props {
   memo: MemoItem;
+  tagOptions: string[];
   onSave: (m: MemoItem) => void;
   onCancel: () => void;
 }
 
-export default function MemoEditor({ memo, onSave, onCancel }: Props) {
+export default function MemoEditor({ memo, tagOptions, onSave, onCancel }: Props) {
   const [title, setTitle] = useState(memo.title);
   const [content, setContent] = useState(memo.content);
-  const [tags, setTags] = useState(memo.tags.join(','));
+  const [tags, setTags] = useState<string[]>(memo.tags);
 
   const handleSave = () => {
-    const tagArr = tags
-      .split(',')
-      .map((t) => t.trim())
-      .filter((t) => t);
-    onSave({ ...memo, title, content, tags: tagArr });
+    onSave({ ...memo, title, content, tags });
   };
 
   return (
@@ -39,16 +38,29 @@ export default function MemoEditor({ memo, onSave, onCancel }: Props) {
               onChange={(e) => setContent(e.target.value)}
               className="border p-1 flex-1"
             />
-            <ImeInput
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              placeholder="タグ(カンマ区切り)"
-              className="border p-1 mt-2"
-            />
+            <div className="border p-1 mt-2 space-y-1">
+              {tagOptions.map((tag) => (
+                <label key={tag} className="block text-sm">
+                  <input
+                    type="checkbox"
+                    className="mr-1"
+                    checked={tags.includes(tag)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setTags((prev) => [...prev, tag]);
+                      } else {
+                        setTags((prev) => prev.filter((t) => t !== tag));
+                      }
+                    }}
+                  />
+                  {tag}
+                </label>
+              ))}
+            </div>
           </div>
           <div className="flex-1 overflow-auto p-2 border rounded bg-gray-50">
             <div className="prose max-w-none">
-              <Markdown>{content}</Markdown>
+              <Markdown remarkPlugins={[remarkGfm, remarkBreaks]}>{content}</Markdown>
             </div>
           </div>
         </div>
