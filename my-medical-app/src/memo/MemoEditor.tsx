@@ -15,9 +15,10 @@ interface Props {
   onCancel: () => void;
   onOpenTagMaster: () => void;
   readOnly?: boolean;
+  message?: string;
 }
 
-export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenTagMaster, readOnly = false }: Props) {
+export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenTagMaster, readOnly = false, message }: Props) {
   const [title, setTitle] = useState(memo.title);
   const [content, setContent] = useState(memo.content);
   const [tags, setTags] = useState<number[]>(memo.tag_ids);
@@ -36,6 +37,9 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div className="bg-white w-11/12 max-w-3xl p-4 rounded shadow flex flex-col h-[80%]">
+        {message && (
+          <div className="text-sm text-red-600 mb-2">{message}</div>
+        )}
         <div className="flex-1 flex flex-col md:flex-row gap-4">
           <div className="flex-1 flex flex-col">
             <ImeInput
@@ -76,15 +80,18 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
             </div>
           </div>
         </div>
-        <div className="flex justify-end mt-2 space-x-2">
+        <div className="flex items-center justify-end mt-2 space-x-2">
+          {readOnly && <span className="text-red-500 mr-auto">参照モード</span>}
           <button className="px-3 py-1 bg-gray-300 rounded" onClick={onCancel}>
             {readOnly ? '閉じる' : 'キャンセル'}
           </button>
-          {!readOnly && (
-            <button className="px-3 py-1 bg-blue-500 text-white rounded" onClick={handleSave}>
-              保存
-            </button>
-          )}
+          <button
+            className={`px-3 py-1 rounded ${readOnly ? 'bg-gray-300 text-gray-500' : 'bg-blue-500 text-white'}`}
+            onClick={handleSave}
+            disabled={readOnly}
+          >
+            保存
+          </button>
         </div>
       </div>
     </div>

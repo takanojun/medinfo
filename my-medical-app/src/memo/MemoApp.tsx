@@ -57,6 +57,7 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [editing, setEditing] = useState<MemoItem | null>(null);
   const [editingReadOnly, setEditingReadOnly] = useState(false);
+  const [editingMessage, setEditingMessage] = useState<string | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
   const [search, setSearch] = useState('');
   const [tagFilter, setTagFilter] = useState<number[]>([]);
@@ -125,6 +126,7 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
     const memo: MemoItem = { id: 0, title: '', content: '', tag_ids: [] };
     setEditing(memo);
     setEditingReadOnly(false);
+    setEditingMessage(null);
   };
 
   const handleEdit = (memo: MemoItem) => {
@@ -133,9 +135,15 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
         if (res.ok) {
           setEditing({ ...memo });
           setEditingReadOnly(false);
+          setEditingMessage(null);
         } else {
           const data = await res.json().catch(() => null);
-          alert(data?.detail || '他のユーザーが編集中です');
+          const detail = data?.detail as string | undefined;
+          const ipMatch = detail?.match(/\((.*)\)/);
+          const ip = ipMatch ? ipMatch[1] : '';
+          setEditing({ ...memo });
+          setEditingReadOnly(true);
+          setEditingMessage(`${ip || '他の端末'}で編集中です。参照モードで起動します。`);
         }
       })
       .catch(() => alert('ロック取得に失敗しました'));
@@ -161,6 +169,7 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
         fetchMemos();
         setSelectedId(data.id);
         setEditing(null);
+        setEditingMessage(null);
         if (memo.id !== 0) unlockMemo(memo.id);
       });
   };
@@ -190,6 +199,7 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
     if (!selected) return;
     setEditing({ ...selected, content: v.content || '' });
     setEditingReadOnly(true);
+    setEditingMessage(null);
   };
 
   return (
@@ -235,9 +245,11 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
             if (!editingReadOnly && editing.id !== 0) unlockMemo(editing.id);
             setEditing(null);
             setEditingReadOnly(false);
+            setEditingMessage(null);
           }}
           onOpenTagMaster={() => setIsTagMasterOpen(true)}
           readOnly={editingReadOnly}
+          message={editingMessage || undefined}
         />
       )}
       <MemoTagManagerModal
