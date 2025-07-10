@@ -224,8 +224,10 @@ export default function App() {
         } else {
           order = list
             .slice()
-            .sort((a, b) => a.short_name.localeCompare(b.short_name))
-            .map((f) => f.id);
+            .sort((a: Facility, b: Facility) =>
+              a.short_name.localeCompare(b.short_name),
+            )
+            .map((f: Facility) => f.id);
         }
         setFacilityOrder(order);
         setCookie('facilityOrder', order.join(','));
@@ -481,8 +483,10 @@ export default function App() {
         } else {
           facOrder = facList
             .slice()
-            .sort((a, b) => a.short_name.localeCompare(b.short_name))
-            .map((f) => f.id);
+            .sort((a: Facility, b: Facility) =>
+              a.short_name.localeCompare(b.short_name),
+            )
+            .map((f: Facility) => f.id);
         }
         setFacilityOrder(facOrder);
         setCookie('facilityOrder', facOrder.join(','));
@@ -1027,7 +1031,8 @@ export default function App() {
   });
 
   // ソート
-  const sortedFacilities = [...filteredFacilities].sort((a, b) => {
+  const sortedFacilities = [...filteredFacilities].sort(
+    (a: Facility, b: Facility) => {
     if (sortOrder === 'none') {
       return (
         facilityOrder.indexOf(a.id) - facilityOrder.indexOf(b.id)
@@ -1089,7 +1094,10 @@ export default function App() {
     .map((v) => v.toLowerCase());
   const filteredFacilitiesModal = facilities
     .slice()
-    .sort((a, b) => facilityOrder.indexOf(a.id) - facilityOrder.indexOf(b.id))
+    .sort(
+      (a: Facility, b: Facility) =>
+        facilityOrder.indexOf(a.id) - facilityOrder.indexOf(b.id),
+    )
     .filter((f) =>
       matchesKeywords(
         `${f.id} ${f.short_name} ${f.official_name || ''}`,

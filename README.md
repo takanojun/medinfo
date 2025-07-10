@@ -18,7 +18,9 @@ uvicorn backend.app.main:app --reload --port 8001
 
 ### フロントエンド
 1. Node.js をインストールします。
-2. `cd my-medical-app` で移動し、`npm install` を実行します。
+2. `cd my-medical-app` に移動してから `npm install` を実行し、依存パッケージをインストールします。
+   - ルートディレクトリで実行すると `package.json` が見つからずエラーになるので注意してください。
+   - `react-markdown` がない場合は `npm install react-markdown` を追加で実行します。
 3. 環境変数 `VITE_API_URL` にバックエンド API の URL を設定します。例: `export VITE_API_URL="http://localhost:8001"`
 4. `npm run dev` で開発サーバーを起動します。
 

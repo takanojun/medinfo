@@ -1,6 +1,5 @@
-import React from 'react';
 import type { MemoItem } from './MemoApp';
-import ReactMarkdown from 'react-markdown';
+import Markdown from 'react-markdown';
 
 interface Props {
   memo: MemoItem | null;
@@ -13,7 +12,9 @@ export default function MemoViewer({ memo }: Props) {
       <div className="flex justify-end mb-2">
         <button className="bg-green-500 text-white px-2 py-1 rounded">編集</button>
       </div>
-      <ReactMarkdown className="prose max-w-none">{memo.content}</ReactMarkdown>
+      <div className="prose max-w-none">
+        <Markdown>{memo.content}</Markdown>
+      </div>
     </div>
   );
 }
