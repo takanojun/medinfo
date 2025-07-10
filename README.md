@@ -32,3 +32,7 @@ uvicorn backend.app.main:app --reload --port 8001
 ## サブディレクトリ README
 - [backend/README.md](backend/README.md)
 - [my-medical-app/README.md](my-medical-app/README.md)
+
+### メモ機能のマークダウン見出し
+メモ編集では `#` 記号の後に半角スペースを入れると見出しとして表示されます。
+例: `# タイトル`

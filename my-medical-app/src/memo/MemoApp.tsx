@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MemoList from './MemoList';
 import MemoViewer from './MemoViewer';
 import MemoEditor from './MemoEditor';
@@ -7,12 +7,19 @@ export interface MemoItem {
   id: number;
   title: string;
   content: string;
-  tags: string[];
+  tag_ids: number[];
   deleted?: boolean;
 }
 
+export interface MemoTag {
+  id: number;
+  name: string;
+  remark?: string;
+  is_deleted: boolean;
+}
+
 const initialMemos: MemoItem[] = [];
-const tagMaster = ['重要', '診察', 'TODO'];
+const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
 interface Props {
   facilityId: number
@@ -24,23 +31,30 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
   const [nextId, setNextId] = useState(() =>
     memos.reduce((max, m) => Math.max(max, m.id), 0) + 1,
   );
+  const [tagMaster, setTagMaster] = useState<MemoTag[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [editing, setEditing] = useState<MemoItem | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
   const [search, setSearch] = useState('');
-  const [tagFilter] = useState<string[]>([]);
+  const [tagFilter] = useState<number[]>([]);
+
+  useEffect(() => {
+    fetch(`${apiBase}/memo-tags`)
+      .then((res) => res.json())
+      .then((data) => setTagMaster(data));
+  }, []);
 
   const filtered = memos.filter((m) => {
     if (!showDeleted && m.deleted) return false;
     if (search && !m.title.includes(search)) return false;
-    if (tagFilter.length && !tagFilter.every((t) => m.tags.includes(t))) return false;
+    if (tagFilter.length && !tagFilter.every((t) => m.tag_ids.includes(t))) return false;
     return true;
   });
 
   const selected = memos.find((m) => m.id === selectedId) || null;
 
   const handleCreate = () => {
-    const memo: MemoItem = { id: nextId, title: '', content: '', tags: [] };
+    const memo: MemoItem = { id: nextId, title: '', content: '', tag_ids: [] };
     setNextId((v) => v + 1);
     setEditing(memo);
   };
@@ -86,6 +100,7 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
         />
         <MemoViewer
           memo={selected}
+          tagOptions={tagMaster}
           onEdit={() => selected && handleEdit(selected)}
           onToggleDelete={() => selected && handleToggleDelete(selected.id)}
         />
