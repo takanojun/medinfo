@@ -1,5 +1,7 @@
 import type { MemoItem } from './MemoApp';
 import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 
 interface Props {
   memo: MemoItem | null;
@@ -26,7 +28,7 @@ export default function MemoViewer({ memo, onEdit, onToggleDelete }: Props) {
         </button>
       </div>
       <div className="prose max-w-none">
-        <Markdown>{memo.content}</Markdown>
+        <Markdown remarkPlugins={[remarkGfm, remarkBreaks]}>{memo.content}</Markdown>
       </div>
     </div>
   );
