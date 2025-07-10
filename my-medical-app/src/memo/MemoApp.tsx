@@ -10,20 +10,7 @@ export interface MemoItem {
   deleted?: boolean;
 }
 
-const initialMemos: MemoItem[] = [
-  {
-    id: 1,
-    title: '初回カウンセリング',
-    content: '# カウンセリング内容\n患者は...\n',
-    tags: ['初診'],
-  },
-  {
-    id: 2,
-    title: '定期検診メモ',
-    content: '## 検査結果\n- 血圧 正常\n- ...',
-    tags: ['検診'],
-  },
-];
+const initialMemos: MemoItem[] = [];
 
 interface Props {
   facilityId: number
@@ -32,7 +19,7 @@ interface Props {
 
 export default function MemoApp({ facilityId, facilityName }: Props) {
   const [memos] = useState<MemoItem[]>(initialMemos);
-  const [selectedId, setSelectedId] = useState<number | null>(initialMemos[0].id);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
   const [search, setSearch] = useState('');
   const [tagFilter] = useState<string[]>([]);
