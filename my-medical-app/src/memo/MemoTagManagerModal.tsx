@@ -10,7 +10,7 @@ interface Props {
 export default function MemoTagManagerModal({ isOpen, onClose }: Props) {
   return (
     <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-[60]" onClose={onClose}>
+      <Dialog as="div" className="relative z-[80]" onClose={onClose}>
         <div className="fixed inset-0 bg-black bg-opacity-25" />
         <div className="fixed inset-0 overflow-y-auto flex items-center justify-center p-4">
           <Dialog.Panel className="w-full max-w-lg bg-white rounded p-6 shadow">
