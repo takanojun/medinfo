@@ -90,6 +90,8 @@ export default function App() {
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   //const [isModalOpen, setIsModalOpen] = useState(false);
   const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
+  const [isSearchTargetModalOpen, setIsSearchTargetModalOpen] = useState(false);
+  const [searchTargets, setSearchTargets] = useState<Record<string, boolean>>({});
   const [isFunctionModalOpen, setIsFunctionModalOpen] = useState(false);
   const [isFunctionMasterModalOpen, setIsFunctionMasterModalOpen] = useState(false);
   const [isFunctionMasterListOpen, setIsFunctionMasterListOpen] = useState(false);
@@ -370,6 +372,35 @@ export default function App() {
         }
         setVisibleColumns(newColumns);
         setCookie('visibleColumns', JSON.stringify(newColumns));
+
+        const newTargets: Record<string, boolean> = {
+          id: true,
+          short_name: true,
+          official_name: true,
+          prefecture: true,
+          city: true,
+          address_detail: true,
+          phone_numbers: true,
+          emails: true,
+          fax: true,
+          remarks: true,
+          functions: true,
+        };
+        const savedTargets = getCookie('searchTargets');
+        if (savedTargets) {
+          try {
+            const parsed = JSON.parse(savedTargets);
+            Object.keys(parsed).forEach((k) => {
+              if (k in newTargets) {
+                newTargets[k] = parsed[k];
+              }
+            });
+          } catch (e) {
+            console.error('Cookie parse error', e);
+          }
+        }
+        setSearchTargets(newTargets);
+        setCookie('searchTargets', JSON.stringify(newTargets));
       })
       .catch((err) => {
         console.error('初期データ取得エラー:', err);
@@ -521,6 +552,33 @@ export default function App() {
         });
         setVisibleColumns(cols);
         setCookie('visibleColumns', JSON.stringify(cols));
+
+        const targetInit: Record<string, boolean> = {
+          id: searchTargets['id'] ?? true,
+          short_name: searchTargets['short_name'] ?? true,
+          official_name: searchTargets['official_name'] ?? true,
+          prefecture: searchTargets['prefecture'] ?? true,
+          city: searchTargets['city'] ?? true,
+          address_detail: searchTargets['address_detail'] ?? true,
+          phone_numbers: searchTargets['phone_numbers'] ?? true,
+          emails: searchTargets['emails'] ?? true,
+          fax: searchTargets['fax'] ?? true,
+          remarks: searchTargets['remarks'] ?? true,
+          functions: searchTargets['functions'] ?? true,
+        };
+        const savedT = getCookie('searchTargets');
+        if (savedT) {
+          try {
+            const parsed = JSON.parse(savedT);
+            Object.keys(parsed).forEach((k) => {
+              if (k in targetInit) targetInit[k] = parsed[k];
+            });
+          } catch (e) {
+            console.error('Cookie parse error', e);
+          }
+        }
+        setSearchTargets(targetInit);
+        setCookie('searchTargets', JSON.stringify(targetInit));
       })
       .catch((err) => {
         console.error('再取得エラー:', err);
@@ -567,6 +625,20 @@ export default function App() {
       })),
   ];
 
+  const searchTargetOptions = [
+    { key: 'id', label: 'ID' },
+    { key: 'short_name', label: '略名' },
+    { key: 'official_name', label: '正式名称' },
+    { key: 'prefecture', label: '都道府県' },
+    { key: 'city', label: '市町村' },
+    { key: 'address_detail', label: '住所詳細' },
+    { key: 'phone_numbers', label: '電話番号' },
+    { key: 'emails', label: 'メール' },
+    { key: 'fax', label: 'FAX' },
+    { key: 'remarks', label: '備考' },
+    { key: 'functions', label: '機能情報' },
+  ];
+
   const toggleColumn = (key: string, groupId: string) => {
     const newVal = !visibleColumns[key];
     if (newVal && !visibleGroups[groupId]) {
@@ -579,6 +651,14 @@ export default function App() {
     setVisibleColumns((prev) => {
       const updated = { ...prev, [key]: newVal };
       setCookie('visibleColumns', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const toggleSearchTarget = (key: string) => {
+    setSearchTargets((prev) => {
+      const updated = { ...prev, [key]: !prev[key] };
+      setCookie('searchTargets', JSON.stringify(updated));
       return updated;
     });
   };
@@ -1008,25 +1088,31 @@ export default function App() {
     .map((v) => v.toLowerCase());
 
   const filteredFacilities = facilities.filter((facility) => {
-    const targets: string[] = [
-      facility.id.toString(),
-      facility.short_name,
-      facility.official_name || '',
-      facility.prefecture || '',
-      facility.city || '',
-      facility.address_detail || '',
-      facility.phone_numbers.map((p) => p.value).join(', '),
-      facility.phone_numbers.map((p) => p.comment || '').join(', '),
-      facility.emails.map((e) => e.value).join(', '),
-      facility.emails.map((e) => e.comment || '').join(', '),
-      facility.fax || '',
-      facility.remarks || '',
-    ];
-    facility.functions.forEach((f) => {
-      targets.push(f.function.name);
-      targets.push(f.selected_values.join(', '));
-      if (f.remarks) targets.push(f.remarks);
-    });
+    const targets: string[] = [];
+    if (searchTargets['id'] ?? true) targets.push(facility.id.toString());
+    if (searchTargets['short_name'] ?? true) targets.push(facility.short_name);
+    if (searchTargets['official_name'] ?? true)
+      targets.push(facility.official_name || '');
+    if (searchTargets['prefecture'] ?? true) targets.push(facility.prefecture || '');
+    if (searchTargets['city'] ?? true) targets.push(facility.city || '');
+    if (searchTargets['address_detail'] ?? true) targets.push(facility.address_detail || '');
+    if (searchTargets['phone_numbers'] ?? true) {
+      targets.push(facility.phone_numbers.map((p) => p.value).join(', '));
+      targets.push(facility.phone_numbers.map((p) => p.comment || '').join(', '));
+    }
+    if (searchTargets['emails'] ?? true) {
+      targets.push(facility.emails.map((e) => e.value).join(', '));
+      targets.push(facility.emails.map((e) => e.comment || '').join(', '));
+    }
+    if (searchTargets['fax'] ?? true) targets.push(facility.fax || '');
+    if (searchTargets['remarks'] ?? true) targets.push(facility.remarks || '');
+    if (searchTargets['functions'] ?? true) {
+      facility.functions.forEach((f) => {
+        targets.push(f.function.name);
+        targets.push(f.selected_values.join(', '));
+        if (f.remarks) targets.push(f.remarks);
+      });
+    }
     return matchesKeywords(targets.join(' '), searchKeywords, searchMode);
   });
 
@@ -1199,6 +1285,12 @@ export default function App() {
       <div className="flex-1 overflow-hidden px-4 pt-2 pb-4 flex flex-col">
       {/* 検索 */}
       <div className="mb-2 flex items-center gap-2">
+        <button
+          onClick={() => setIsSearchTargetModalOpen(true)}
+          className="px-2 py-1 bg-gray-200 rounded"
+        >
+          検索対象
+        </button>
         <ImeInput
           type="text"
           placeholder="キーワードで検索"
@@ -1615,6 +1707,51 @@ export default function App() {
                 </Dialog.Panel>
               </Transition.Child>
             </div>
+          </div>
+        </Dialog>
+      </Transition>
+
+      <Transition appear show={isSearchTargetModalOpen} as={Fragment}>
+        <Dialog
+          as="div"
+          className="relative z-10"
+          onClose={() => setIsSearchTargetModalOpen(false)}
+        >
+          <div className="fixed inset-0 bg-black bg-opacity-25" />
+          <div className="fixed inset-0 overflow-y-auto flex items-center justify-center p-4">
+            <Dialog.Panel className="w-full max-w-md bg-white rounded p-6 shadow">
+              <Dialog.Title as="h3" className="text-lg font-medium mb-4">
+                検索対象を選択
+              </Dialog.Title>
+              <div className="max-h-60 overflow-y-auto">
+                {searchTargetOptions.map((opt) => (
+                  <div key={opt.key} className="flex justify-between items-center py-2">
+                    <span>{opt.label}</span>
+                    <Switch
+                      checked={searchTargets[opt.key] ?? true}
+                      onChange={() => toggleSearchTarget(opt.key)}
+                      className={`${
+                        searchTargets[opt.key] ?? true ? 'bg-blue-500' : 'bg-gray-300'
+                      } relative inline-flex h-6 w-11 items-center rounded-full`}
+                    >
+                      <span
+                        className={`${
+                          searchTargets[opt.key] ?? true ? 'translate-x-6' : 'translate-x-1'
+                        } inline-block h-4 w-4 transform rounded-full bg-white transition`}
+                      />
+                    </Switch>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={() => setIsSearchTargetModalOpen(false)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded"
+                >
+                  閉じる
+                </button>
+              </div>
+            </Dialog.Panel>
           </div>
         </Dialog>
       </Transition>
