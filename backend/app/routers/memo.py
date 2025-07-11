@@ -194,18 +194,25 @@ def get_lock(memo_id: int, db: Session = Depends(get_db)):
 
 @router.post("/{memo_id}/lock", response_model=schemas.FacilityMemoLockBase)
 def lock_memo(memo_id: int, user: str, request: Request, db: Session = Depends(get_db)):
-    now = datetime.now(timezone.utc)
+    # always work with naive UTC datetimes as the database column does not store timezone info
+    now = datetime.utcnow()
     client_ip = request.headers.get("X-Forwarded-For") or request.client.host
     lock = (
         db.query(models.FacilityMemoLock)
         .filter(models.FacilityMemoLock.memo_id == memo_id)
         .first()
     )
+    # normalize stored timestamp to naive UTC if it contains timezone info
+    locked_at = None
+    if lock and lock.locked_at:
+        locked_at = lock.locked_at
+        if locked_at.tzinfo:
+            locked_at = locked_at.astimezone(timezone.utc).replace(tzinfo=None)
     if (
         lock
         and lock.locked_by != user
-        and lock.locked_at
-        and lock.locked_at > now - LOCK_TIMEOUT
+        and locked_at
+        and locked_at > now - LOCK_TIMEOUT
     ):
         raise HTTPException(
             status_code=409, detail=f"locked by {lock.locked_by} ({lock.ip_address})"
