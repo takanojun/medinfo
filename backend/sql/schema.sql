@@ -70,6 +70,7 @@ CREATE TABLE facility_memo_versions (
     content TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     ip_address TEXT,
+    action TEXT,
     UNIQUE (memo_id, version_no)
 );
 
