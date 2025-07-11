@@ -32,7 +32,17 @@ interface FacilityMemoResponse {
 
 const initialMemos: MemoItem[] = [];
 const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8001';
-const currentUser = 'user1';
+
+const getCurrentUser = (): string => {
+  let user = localStorage.getItem('memoUser');
+  if (!user) {
+    user = Math.random().toString(36).slice(2);
+    localStorage.setItem('memoUser', user);
+  }
+  return user;
+};
+
+const currentUser = getCurrentUser();
 
 const getCookie = (name: string): string | null => {
   const match = document.cookie
