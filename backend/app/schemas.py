@@ -226,6 +226,7 @@ class FacilityMemoVersionBase(BaseModel):
     content: Optional[str]
     created_at: Optional[datetime]
     ip_address: Optional[str]
+    action: Optional[str]
 
     class Config:
         from_attributes = True

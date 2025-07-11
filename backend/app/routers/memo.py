@@ -30,7 +30,10 @@ def read_memos(
 
 @router.post("/facility/{facility_id}", response_model=schemas.FacilityMemoBase)
 def create_memo(
-    facility_id: int, memo: schemas.FacilityMemoCreate, db: Session = Depends(get_db)
+    facility_id: int,
+    memo: schemas.FacilityMemoCreate,
+    request: Request,
+    db: Session = Depends(get_db),
 ):
     db_memo = models.FacilityMemo(
         facility_id=facility_id, title=memo.title, content=memo.content
@@ -42,6 +45,19 @@ def create_memo(
         db.add(models.FacilityMemoTagLink(memo_id=db_memo.id, tag_id=tag_id))
     db.commit()
     db.refresh(db_memo)
+
+    # record initial version
+    client_ip = request.headers.get("X-Forwarded-For") or request.client.host
+    db.add(
+        models.FacilityMemoVersion(
+            memo_id=db_memo.id,
+            version_no=1,
+            content=db_memo.content,
+            ip_address=client_ip,
+            action="create",
+        )
+    )
+    db.commit()
     return db_memo
 
 
@@ -81,6 +97,7 @@ def update_memo(
             version_no=next_no,
             content=db_memo.content,
             ip_address=client_ip,
+            action="edit",
         )
         db.add(version)
         db_memo.content = update.content
@@ -98,19 +115,36 @@ def update_memo(
 
 
 @router.delete("/{memo_id}", response_model=dict)
-def delete_memo(memo_id: int, db: Session = Depends(get_db)):
+def delete_memo(memo_id: int, request: Request, db: Session = Depends(get_db)):
     db_memo = (
         db.query(models.FacilityMemo).filter(models.FacilityMemo.id == memo_id).first()
     )
     if not db_memo:
         raise HTTPException(status_code=404, detail="Memo not found")
     db_memo.is_deleted = True
+    latest_version = (
+        db.query(models.FacilityMemoVersion)
+        .filter(models.FacilityMemoVersion.memo_id == memo_id)
+        .order_by(models.FacilityMemoVersion.version_no.desc())
+        .first()
+    )
+    next_no = latest_version.version_no + 1 if latest_version else 1
+    client_ip = request.headers.get("X-Forwarded-For") or request.client.host
+    db.add(
+        models.FacilityMemoVersion(
+            memo_id=memo_id,
+            version_no=next_no,
+            content=db_memo.content,
+            ip_address=client_ip,
+            action="delete",
+        )
+    )
     db.commit()
     return {"message": "deleted"}
 
 
 @router.put("/{memo_id}/restore", response_model=schemas.FacilityMemoBase)
-def restore_memo(memo_id: int, db: Session = Depends(get_db)):
+def restore_memo(memo_id: int, request: Request, db: Session = Depends(get_db)):
     db_memo = (
         db.query(models.FacilityMemo)
         .filter(
@@ -121,19 +155,46 @@ def restore_memo(memo_id: int, db: Session = Depends(get_db)):
     if not db_memo:
         raise HTTPException(status_code=404, detail="Memo not found")
     db_memo.is_deleted = False
+    latest_version = (
+        db.query(models.FacilityMemoVersion)
+        .filter(models.FacilityMemoVersion.memo_id == memo_id)
+        .order_by(models.FacilityMemoVersion.version_no.desc())
+        .first()
+    )
+    next_no = latest_version.version_no + 1 if latest_version else 1
+    client_ip = request.headers.get("X-Forwarded-For") or request.client.host
+    db.add(
+        models.FacilityMemoVersion(
+            memo_id=memo_id,
+            version_no=next_no,
+            content=db_memo.content,
+            ip_address=client_ip,
+            action="restore",
+        )
+    )
     db.commit()
     db.refresh(db_memo)
     return db_memo
 
 
 @router.get("/{memo_id}/versions", response_model=List[schemas.FacilityMemoVersionBase])
-def get_versions(memo_id: int, db: Session = Depends(get_db)):
-    versions = (
-        db.query(models.FacilityMemoVersion)
-        .filter(models.FacilityMemoVersion.memo_id == memo_id)
-        .order_by(models.FacilityMemoVersion.version_no.desc())
-        .all()
+def get_versions(
+    memo_id: int,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    ip_address: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(models.FacilityMemoVersion).filter(
+        models.FacilityMemoVersion.memo_id == memo_id
     )
+    if start_date:
+        query = query.filter(models.FacilityMemoVersion.created_at >= start_date)
+    if end_date:
+        query = query.filter(models.FacilityMemoVersion.created_at <= end_date)
+    if ip_address:
+        query = query.filter(models.FacilityMemoVersion.ip_address == ip_address)
+    versions = query.order_by(models.FacilityMemoVersion.version_no.desc()).all()
     return versions
 
 
@@ -172,6 +233,7 @@ def restore_version(
             version_no=next_no,
             content=memo.content,
             ip_address=client_ip,
+            action="restore",
         )
     )
     memo.content = version.content

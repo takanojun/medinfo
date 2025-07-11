@@ -141,6 +141,7 @@ class FacilityMemoVersion(Base):
     content = Column(Text)
     created_at = Column(TIMESTAMP, server_default="now()")
     ip_address = Column(Text)
+    action = Column(Text)
 
     memo = relationship("FacilityMemo", back_populates="versions")
 
