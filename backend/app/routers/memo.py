@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from .. import database, schemas, models
 
 router = APIRouter(prefix="/memos", tags=["memos"])
@@ -194,7 +194,7 @@ def get_lock(memo_id: int, db: Session = Depends(get_db)):
 
 @router.post("/{memo_id}/lock", response_model=schemas.FacilityMemoLockBase)
 def lock_memo(memo_id: int, user: str, request: Request, db: Session = Depends(get_db)):
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     client_ip = request.headers.get("X-Forwarded-For") or request.client.host
     lock = (
         db.query(models.FacilityMemoLock)
