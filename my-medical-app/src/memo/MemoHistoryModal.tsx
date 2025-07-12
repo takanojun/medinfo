@@ -37,7 +37,7 @@ export default function MemoHistoryModal({ memoId, isOpen, onClose, onRestore, o
     if (!isOpen) return;
     const params = new URLSearchParams();
     if (start) params.append('start_date', start);
-    if (end) params.append('end_date', end);
+    if (end) params.append('end_date', `${end}T23:59`);
     if (ip) params.append('ip_address', ip);
     fetch(`${apiBase}/memos/${memoId}/versions?${params.toString()}`)
       .then((res) => res.json())
