@@ -23,7 +23,11 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
   const [content, setContent] = useState(memo.content);
   const [tags, setTags] = useState<number[]>(memo.tag_ids);
 
-  const options: Option[] = tagOptions.map((t) => ({ value: t.id, label: t.name }));
+  const options: Option[] = tagOptions.map((t) => ({
+    value: t.id,
+    label: t.name,
+    color: t.color,
+  }));
 
   const handleSave = () => {
     if (readOnly) return;

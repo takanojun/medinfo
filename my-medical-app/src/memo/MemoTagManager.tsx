@@ -20,6 +20,7 @@ export default function MemoTagManager() {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [name, setName] = useState('');
   const [remark, setRemark] = useState('');
+  const [color, setColor] = useState('#bfdbfe');
   const [editing, setEditing] = useState<MemoTag | null>(null);
 
   const fetchTags = () => {
@@ -55,10 +56,11 @@ export default function MemoTagManager() {
     fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, remark }),
+      body: JSON.stringify({ name, remark, color }),
     }).then(() => {
       setName('');
       setRemark('');
+      setColor('#bfdbfe');
       setEditing(null);
       fetchTags();
     });
@@ -76,12 +78,14 @@ export default function MemoTagManager() {
     setEditing(tag);
     setName(tag.name);
     setRemark(tag.remark || '');
+    setColor(tag.color || '#bfdbfe');
   };
 
   const cancelEdit = () => {
     setEditing(null);
     setName('');
     setRemark('');
+    setColor('#bfdbfe');
   };
 
   const updateOrder = (newTags: MemoTag[]) => {
@@ -114,6 +118,12 @@ export default function MemoTagManager() {
           placeholder="備考"
           className="border p-1"
         />
+        <input
+          type="color"
+          value={color}
+          onChange={(e) => setColor(e.target.value)}
+          className="border p-1 w-16 h-8"
+        />
         <button className="bg-blue-500 text-white px-2 py-1 rounded" onClick={handleSubmit}>
           {editing ? '更新' : '追加'}
         </button>
@@ -129,6 +139,7 @@ export default function MemoTagManager() {
             <th className="border p-1">ID</th>
             <th className="border p-1">名前</th>
             <th className="border p-1">備考</th>
+            <th className="border p-1">色</th>
             <th className="border p-1">操作</th>
           </tr>
         </thead>
@@ -145,6 +156,14 @@ export default function MemoTagManager() {
               <td className="border p-1 text-center">{tag.id}</td>
               <td className="border p-1">{tag.name}</td>
               <td className="border p-1">{tag.remark}</td>
+              <td className="border p-1">
+                {tag.color && (
+                  <span
+                    className="inline-block w-4 h-4 rounded"
+                    style={{ backgroundColor: tag.color }}
+                  />
+                )}
+              </td>
               <td className="border p-1 space-x-1">
                 <button className="px-1 bg-green-500 text-white" onClick={() => startEdit(tag)}>
                   編集

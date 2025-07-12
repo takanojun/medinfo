@@ -18,6 +18,7 @@ export interface MemoTag {
   id: number;
   name: string;
   remark?: string;
+  color?: string;
   is_deleted: boolean;
 }
 

@@ -4,6 +4,7 @@ import { Fragment, useState } from 'react';
 export interface Option {
   value: number;
   label: string;
+  color?: string;
 }
 
 interface Props {
@@ -34,9 +35,19 @@ export default function MultiSelect({
     }
   };
 
-  const selectedLabels = selected
-    .map((v) => options.find((o) => o.value === v)?.label)
-    .filter(Boolean);
+  const selectedOptions = selected
+    .map((v) => options.find((o) => o.value === v))
+    .filter(Boolean) as Option[];
+
+  const getContrast = (hex?: string) => {
+    if (!hex) return '#000';
+    const c = hex.replace('#', '');
+    const r = parseInt(c.substring(0, 2), 16);
+    const g = parseInt(c.substring(2, 4), 16);
+    const b = parseInt(c.substring(4, 6), 16);
+    const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+    return yiq >= 128 ? '#000' : '#fff';
+  };
 
   return (
     <Listbox value={selected} onChange={onChange} multiple disabled={disabled}>
@@ -46,14 +57,18 @@ export default function MultiSelect({
             onClick={() => !disabled && setOpen((o) => !o)}
             className={`w-full border rounded px-2 py-1 text-left ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
           >
-            {selectedLabels.length ? (
+            {selectedOptions.length ? (
               <div className="flex flex-wrap gap-1">
-                {selectedLabels.map((label) => (
+                {selectedOptions.map((opt) => (
                   <span
-                    key={label}
-                    className="bg-blue-100 text-blue-800 px-1 rounded text-sm"
+                    key={opt.value}
+                    className="px-1 rounded text-sm"
+                    style={{
+                      backgroundColor: opt.color || '#bfdbfe',
+                      color: getContrast(opt.color),
+                    }}
                   >
-                    {label}
+                    {opt.label}
                   </span>
                 ))}
               </div>
@@ -85,6 +100,12 @@ export default function MultiSelect({
                         checked={selected.includes(opt.value)}
                         readOnly
                       />
+                      {opt.color && (
+                        <span
+                          className="w-3 h-3 inline-block rounded"
+                          style={{ backgroundColor: opt.color }}
+                        />
+                      )}
                       <span>{opt.label}</span>
                     </li>
                   )}
