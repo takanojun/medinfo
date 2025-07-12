@@ -13,10 +13,19 @@ interface Props {
 
 export default function MemoViewer({ memo, tagOptions, onEdit, onToggleDelete, onShowHistory }: Props) {
   if (!memo) return <div className="flex-1 p-4">メモを選択してください</div>;
-  const tags = memo.tag_ids
-    .map((id) => tagOptions.find((t) => t.id === id)?.name)
-    .filter(Boolean)
-    .join(', ');
+  const tagObjs = memo.tag_ids
+    .map((id) => tagOptions.find((t) => t.id === id))
+    .filter(Boolean) as MemoTag[];
+
+  const getContrast = (hex?: string) => {
+    if (!hex) return '#000';
+    const c = hex.replace('#', '');
+    const r = parseInt(c.substring(0, 2), 16);
+    const g = parseInt(c.substring(2, 4), 16);
+    const b = parseInt(c.substring(4, 6), 16);
+    const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+    return yiq >= 128 ? '#000' : '#fff';
+  };
   return (
     <div className="flex-1 p-4 overflow-y-auto">
       <div className="flex justify-end mb-2 space-x-2">
@@ -42,7 +51,19 @@ export default function MemoViewer({ memo, tagOptions, onEdit, onToggleDelete, o
       <div className="prose max-w-none">
         <Markdown remarkPlugins={[remarkGfm, remarkBreaks]}>{memo.content}</Markdown>
       </div>
-      {tags && <div className="mt-2 text-sm text-gray-600">タグ: {tags}</div>}
+      {tagObjs.length > 0 && (
+        <div className="mt-2 text-sm flex flex-wrap gap-1">
+          {tagObjs.map((t) => (
+            <span
+              key={t.id}
+              className="px-1 rounded"
+              style={{ backgroundColor: t.color || '#bfdbfe', color: getContrast(t.color) }}
+            >
+              {t.name}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

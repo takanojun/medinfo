@@ -93,6 +93,7 @@ class MemoTag(Base):
     id = Column(Integer, primary_key=True)
     name = Column(Text, nullable=False)
     remark = Column(Text)
+    color = Column(Text)
     is_deleted = Column(Boolean, default=False)
 
     memos = relationship(

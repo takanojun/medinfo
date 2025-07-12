@@ -171,6 +171,7 @@ class MemoTagBase(BaseModel):
     id: int
     name: str
     remark: Optional[str]
+    color: Optional[str]
     is_deleted: bool
 
     class Config:
@@ -180,6 +181,7 @@ class MemoTagBase(BaseModel):
 class MemoTagCreate(BaseModel):
     name: str
     remark: Optional[str] = None
+    color: Optional[str] = None
 
     @validator("name")
     def validate_name(cls, v: str) -> str:

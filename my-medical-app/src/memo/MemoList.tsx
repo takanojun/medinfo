@@ -33,7 +33,11 @@ export default function MemoList({
   onCreate,
   className = '',
 }: Props) {
-  const options: Option[] = tagOptions.map((t) => ({ value: t.id, label: t.name }));
+  const options: Option[] = tagOptions.map((t) => ({
+    value: t.id,
+    label: t.name,
+    color: t.color,
+  }));
   return (
     <div className={`overflow-y-auto p-2 space-y-2 ${className}`}>
       <div className="flex items-center justify-between mb-2">
