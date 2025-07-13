@@ -242,3 +242,21 @@ class FacilityMemoLockBase(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class NoteImageBase(BaseModel):
+    id: str
+    memo_id: int
+    file_name: str
+    mime_type: str
+    created_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+class NoteImageCreate(BaseModel):
+    memo_id: int
+    file_name: str
+    mime_type: str
+
