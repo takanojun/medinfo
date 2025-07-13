@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
+import rehypeRaw from 'rehype-raw';
 import ImeInput from '../components/ImeInput';
 import ImeTextarea from '../components/ImeTextarea';
 import MultiSelect from '../components/MultiSelect';
@@ -22,6 +23,30 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
   const [title, setTitle] = useState(memo.title);
   const [content, setContent] = useState(memo.content);
   const [tags, setTags] = useState<number[]>(memo.tag_ids);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const applyStyle = (style: string) => {
+    if (readOnly) return;
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart || 0;
+    const end = textarea.selectionEnd || 0;
+    const before = content.slice(0, start);
+    const selected = content.slice(start, end);
+    const after = content.slice(end);
+    const open = `<span style="${style}">`;
+    const close = '</span>';
+    const newContent = before + open + selected + close + after;
+    setContent(newContent);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.selectionStart = start + open.length;
+      textarea.selectionEnd = start + open.length + selected.length;
+    });
+  };
+
+  const colors = ['#000000', '#ff0000', '#00ff00', '#0000ff', '#ffa500'];
+  const sizes = ['12px', '16px', '20px', '24px'];
 
   const options: Option[] = tagOptions.map((t) => ({ value: t.id, label: t.name }));
 
@@ -49,11 +74,62 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
               className="border p-1 mb-2"
               disabled={readOnly}
             />
+            {!readOnly && (
+              <div className="flex items-center gap-2 mb-1 text-sm">
+                <select
+                  className="border p-1"
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      applyStyle(`color:${e.target.value}`);
+                      e.target.value = '';
+                    }
+                  }}
+                >
+                  <option value="">色</option>
+                  {colors.map((c) => (
+                    <option key={c} value={c} style={{ color: c }}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="border p-1"
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      applyStyle(`font-size:${e.target.value}`);
+                      e.target.value = '';
+                    }
+                  }}
+                >
+                  <option value="">サイズ</option>
+                  {sizes.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="border px-1 rounded"
+                  onClick={() => applyStyle('text-decoration: underline')}
+                >
+                  <u>U</u>
+                </button>
+                <button
+                  type="button"
+                  className="border px-1 rounded"
+                  onClick={() => applyStyle('text-decoration: line-through')}
+                >
+                  <s>S</s>
+                </button>
+              </div>
+            )}
             <ImeTextarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="border p-1 flex-1"
               disabled={readOnly}
+              ref={textareaRef}
             />
             <div className="border p-1 mt-2 space-y-1 relative pr-20">
               {!readOnly && (
@@ -76,7 +152,12 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
           </div>
           <div className="flex-1 overflow-auto p-2 border rounded bg-gray-50">
             <div className="prose max-w-none">
-              <Markdown remarkPlugins={[remarkGfm, remarkBreaks]}>{content}</Markdown>
+              <Markdown
+                remarkPlugins={[remarkGfm, remarkBreaks]}
+                rehypePlugins={[rehypeRaw]}
+              >
+                {content}
+              </Markdown>
             </div>
           </div>
         </div>

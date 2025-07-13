@@ -2,6 +2,7 @@ import type { MemoItem, MemoTag } from './MemoApp';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
+import rehypeRaw from 'rehype-raw';
 
 interface Props {
   memo: MemoItem | null;
@@ -40,7 +41,12 @@ export default function MemoViewer({ memo, tagOptions, onEdit, onToggleDelete, o
         </button>
       </div>
       <div className="prose max-w-none">
-        <Markdown remarkPlugins={[remarkGfm, remarkBreaks]}>{memo.content}</Markdown>
+        <Markdown
+          remarkPlugins={[remarkGfm, remarkBreaks]}
+          rehypePlugins={[rehypeRaw]}
+        >
+          {memo.content}
+        </Markdown>
       </div>
       {tags && <div className="mt-2 text-sm text-gray-600">タグ: {tags}</div>}
     </div>
