@@ -39,7 +39,7 @@ export default function MemoList({
     color: t.color,
   }));
   return (
-    <div className={`overflow-y-auto p-2 space-y-2 ${className}`}>
+    <div className={`flex flex-col h-full p-2 space-y-2 ${className}`}>
       <div className="flex items-center justify-between mb-2">
         <ImeInput
           type="text"
@@ -71,7 +71,8 @@ export default function MemoList({
       >
         ＋新規作成
       </button>
-      <ul className="space-y-1">
+      <div className="flex-1 overflow-y-auto">
+        <ul className="space-y-1">
         {memos.map((m) => (
           <li
             key={m.id}
@@ -85,6 +86,7 @@ export default function MemoList({
           </li>
         ))}
       </ul>
+    </div>
     </div>
   );
 }
