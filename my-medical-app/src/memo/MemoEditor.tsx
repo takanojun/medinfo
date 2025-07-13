@@ -24,6 +24,31 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
   const [content, setContent] = useState(memo.content);
   const [tags, setTags] = useState<number[]>(memo.tag_ids);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+
+  const handleFiles = (files: FileList | File[]) => {
+    if (memo.id === 0) {
+      alert('画像を追加する前にメモを保存してください');
+      return;
+    }
+    Array.from(files).forEach((file) => {
+      if (!file.type.startsWith('image/')) return;
+      const form = new FormData();
+      form.append('file', file);
+      form.append('memo_id', String(memo.id));
+      fetch(`${apiBase}/images`, {
+        method: 'POST',
+        body: form,
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          console.log('uploaded', data.id);
+        })
+        .catch(() => alert('画像アップロードに失敗しました'));
+    });
+  };
 
   const applyStyle = (style: string) => {
     if (readOnly) return;
@@ -126,6 +151,21 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
                 >
                   <s>S</s>
                 </button>
+                <button
+                  type="button"
+                  className="border px-1 rounded"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  画像追加
+                </button>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={(e) => e.target.files && handleFiles(e.target.files)}
+                />
               </div>
             )}
             <ImeTextarea
@@ -134,6 +174,26 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
               className="border p-1 flex-1"
               disabled={readOnly}
               ref={textareaRef}
+              onDragOver={(e) => {
+                if (!readOnly) e.preventDefault();
+              }}
+              onDrop={(e) => {
+                if (readOnly) return;
+                e.preventDefault();
+                handleFiles(e.dataTransfer.files);
+              }}
+              onPaste={(e) => {
+                if (readOnly) return;
+                const items = Array.from(e.clipboardData.items);
+                const fileItem = items.find((it) => it.type.startsWith('image/'));
+                if (fileItem) {
+                  const file = fileItem.getAsFile();
+                  if (file) {
+                    e.preventDefault();
+                    handleFiles([file]);
+                  }
+                }
+              }}
             />
             <div className="border p-1 mt-2 space-y-1 relative pr-20">
               {!readOnly && (
