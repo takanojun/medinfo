@@ -10,6 +10,8 @@ from sqlalchemy import (
     JSON,
     TIMESTAMP,
 )
+from sqlalchemy.dialects.postgresql import BYTEA
+import uuid
 from sqlalchemy.orm import relationship
 from .database import Base
 
@@ -167,3 +169,17 @@ class FacilityMemoLock(Base):
     ip_address = Column(Text)
 
     memo = relationship("FacilityMemo", back_populates="lock")
+
+
+# 画像データ保存テーブル
+class NoteImage(Base):
+    __tablename__ = "note_images"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    memo_id = Column(Integer, ForeignKey("facility_memos.id", ondelete="CASCADE"))
+    file_name = Column(Text, nullable=False)
+    mime_type = Column(Text, nullable=False)
+    data = Column(BYTEA, nullable=False)
+    created_at = Column(TIMESTAMP, server_default="now()")
+
+    memo = relationship("FacilityMemo", backref="images")

@@ -86,3 +86,12 @@ CREATE TABLE facility_memo_locks (
     locked_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     ip_address TEXT
 );
+
+CREATE TABLE note_images (
+    id UUID PRIMARY KEY,
+    memo_id INTEGER REFERENCES facility_memos(id) ON DELETE CASCADE,
+    file_name TEXT NOT NULL,
+    mime_type TEXT NOT NULL,
+    data BYTEA NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
