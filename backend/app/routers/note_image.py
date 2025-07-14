@@ -1,4 +1,12 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Response
+from fastapi import (
+    APIRouter,
+    Depends,
+    UploadFile,
+    File,
+    Form,
+    HTTPException,
+    Response,
+)
 from sqlalchemy.orm import Session
 from .. import database, models, schemas
 
@@ -15,7 +23,7 @@ def get_db():
 
 @router.post("/", response_model=schemas.NoteImageBase)
 async def upload_image(
-    memo_id: int,
+    memo_id: int = Form(...),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
