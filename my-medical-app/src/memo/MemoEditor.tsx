@@ -31,7 +31,7 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
   const resizingIdRef = useRef<string | null>(null);
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
-  const resizeDirRef = useRef<'left' | 'right'>('right');
+  const resizeDirRef = useRef<'right'>('right');
   const dragPosRef = useRef(0);
 
   const caretIndexFromPoint = (e: { clientX: number; clientY: number }): number => {
@@ -63,7 +63,7 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
     const move = (e: MouseEvent) => {
       if (!resizingIdRef.current) return;
       const dx = e.clientX - startXRef.current;
-      const delta = resizeDirRef.current === 'left' ? -dx : dx;
+      const delta = dx;
       const newWidth = Math.max(50, startWidthRef.current + delta);
       updateImageWidth(resizingIdRef.current, newWidth);
     };
@@ -387,52 +387,17 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
                           }}
                         />
                         {!readOnly && id && (
-                          <>
-                            <span
-                              className="absolute w-3 h-3 bg-blue-500 bottom-0 right-0 cursor-se-resize"
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                startXRef.current = e.clientX;
-                                startWidthRef.current = width;
-                                resizeDirRef.current = 'right';
-                                resizingIdRef.current = id;
-                              }}
-                            />
-                            <span
-                              className="absolute w-3 h-3 bg-blue-500 bottom-0 left-0 cursor-sw-resize"
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                startXRef.current = e.clientX;
-                                startWidthRef.current = width;
-                                resizeDirRef.current = 'left';
-                                resizingIdRef.current = id;
-                              }}
-                            />
-                            <span
-                              className="absolute w-3 h-3 bg-blue-500 top-0 right-0 cursor-ne-resize"
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                startXRef.current = e.clientX;
-                                startWidthRef.current = width;
-                                resizeDirRef.current = 'right';
-                                resizingIdRef.current = id;
-                              }}
-                            />
-                            <span
-                              className="absolute w-3 h-3 bg-blue-500 top-0 left-0 cursor-nw-resize"
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                startXRef.current = e.clientX;
-                                startWidthRef.current = width;
-                                resizeDirRef.current = 'left';
-                                resizingIdRef.current = id;
-                              }}
-                            />
-                          </>
+                          <span
+                            className="absolute w-4 h-4 bottom-0 right-0 cursor-se-resize"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              startXRef.current = e.clientX;
+                              startWidthRef.current = width;
+                              resizeDirRef.current = 'right';
+                              resizingIdRef.current = id;
+                            }}
+                          />
                         )}
                       </span>
                     );
