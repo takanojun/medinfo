@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -25,8 +25,67 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
   const [tags, setTags] = useState<number[]>(memo.tag_ids);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const resizingIdRef = useRef<string | null>(null);
+  const startXRef = useRef(0);
+  const startWidthRef = useRef(0);
+
+  useEffect(() => {
+    const move = (e: MouseEvent) => {
+      if (!resizingIdRef.current) return;
+      const dx = e.clientX - startXRef.current;
+      const newWidth = Math.max(50, startWidthRef.current + dx);
+      updateImageWidth(resizingIdRef.current, newWidth);
+    };
+    const up = () => {
+      resizingIdRef.current = null;
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+    return () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+  }, []);
 
   const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+
+  const generateTag = (id: string, name: string, width = 300) =>
+    `<img data-id="${id}" alt="${name}" src="${apiBase}/images/${id}" style="width:${width}px;max-width:100%;" />`;
+
+  const extractTag = (id: string) => {
+    const regex = new RegExp(`<img[^>]*data-id="${id}"[^>]*>`);
+    const match = content.match(regex);
+    return match ? match[0] : '';
+  };
+
+  const removeImage = (id: string) => {
+    setContent((prev) => prev.replace(new RegExp(`<img[^>]*data-id="${id}"[^>]*>`), ''));
+  };
+
+  const updateImageWidth = (id: string, width: number) => {
+    setContent((prev) => {
+      const regex = new RegExp(`<img[^>]*data-id="${id}"[^>]*>`);
+      const m = prev.match(regex);
+      if (!m) return prev;
+      const newTag = generateTag(id, '', width);
+      return prev.replace(regex, newTag);
+    });
+  };
+
+  const insertTagAt = (tag: string, pos: number) => {
+    setContent((prev) => {
+      const before = prev.slice(0, pos);
+      const after = prev.slice(pos);
+      return before + tag + after;
+    });
+    setTimeout(() => {
+      const ta = textareaRef.current;
+      if (ta) {
+        ta.focus();
+        ta.selectionStart = ta.selectionEnd = pos + tag.length;
+      }
+    });
+  };
 
   const handleFiles = (files: FileList | File[]) => {
     if (memo.id === 0) {
@@ -44,7 +103,10 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
       })
         .then((res) => res.json())
         .then((data) => {
-          console.log('uploaded', data.id);
+          const textarea = textareaRef.current;
+          const pos = textarea ? textarea.selectionStart || content.length : content.length;
+          const tag = generateTag(data.id, file.name);
+          insertTagAt(tag, pos);
         })
         .catch(() => alert('画像アップロードに失敗しました'));
     });
@@ -179,6 +241,17 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
               }}
               onDrop={(e) => {
                 if (readOnly) return;
+                const imgId = e.dataTransfer.getData('text/image-id');
+                if (imgId) {
+                  e.preventDefault();
+                  const pos = (e.target as HTMLTextAreaElement).selectionStart || 0;
+                  const tag = extractTag(imgId);
+                  if (tag) {
+                    removeImage(imgId);
+                    insertTagAt(tag, pos);
+                  }
+                  return;
+                }
                 e.preventDefault();
                 handleFiles(e.dataTransfer.files);
               }}
@@ -219,6 +292,40 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
               <Markdown
                 remarkPlugins={[remarkGfm, remarkBreaks]}
                 rehypePlugins={[rehypeRaw]}
+                components={{
+                  img({ node, ...props }) {
+                    const id = (props as any)['data-id'] as string | undefined;
+                    const width = parseInt((props.style as React.CSSProperties)?.width as string) || 300;
+                    return (
+                      <span className="inline-block relative" draggable={!readOnly}
+                        onDragStart={(e) => {
+                          if (id) {
+                            e.dataTransfer.setData('text/image-id', id);
+                          }
+                        }}
+                        onContextMenu={(e) => {
+                          if (!readOnly && id && confirm('画像を削除しますか？')) {
+                            e.preventDefault();
+                            removeImage(id);
+                          }
+                        }}
+                      >
+                        <img {...props} className="max-w-full" />
+                        {!readOnly && id && (
+                          <span
+                            className="absolute w-3 h-3 bg-blue-500 bottom-0 right-0 cursor-se-resize"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              startXRef.current = e.clientX;
+                              startWidthRef.current = width;
+                              resizingIdRef.current = id;
+                            }}
+                          />
+                        )}
+                      </span>
+                    );
+                  },
+                }}
               >
                 {content}
               </Markdown>
