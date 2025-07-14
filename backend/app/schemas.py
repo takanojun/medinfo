@@ -1,6 +1,7 @@
 from pydantic import BaseModel, validator
 from typing import Optional, List
 from datetime import datetime
+from uuid import UUID
 
 
 class ContactInfo(BaseModel):
@@ -245,7 +246,7 @@ class FacilityMemoLockBase(BaseModel):
 
 
 class NoteImageBase(BaseModel):
-    id: str
+    id: UUID
     memo_id: int
     file_name: str
     mime_type: str
