@@ -10,7 +10,7 @@ from sqlalchemy import (
     JSON,
     TIMESTAMP,
 )
-from sqlalchemy.dialects.postgresql import BYTEA
+from sqlalchemy.dialects.postgresql import BYTEA, UUID as PG_UUID
 import uuid
 from sqlalchemy.orm import relationship
 from .database import Base
@@ -175,7 +175,7 @@ class FacilityMemoLock(Base):
 class NoteImage(Base):
     __tablename__ = "note_images"
 
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     memo_id = Column(Integer, ForeignKey("facility_memos.id", ondelete="CASCADE"))
     file_name = Column(Text, nullable=False)
     mime_type = Column(Text, nullable=False)
