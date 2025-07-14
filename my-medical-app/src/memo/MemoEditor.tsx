@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import ImageModal from '../components/ImageModal';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -23,6 +24,8 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
   const [title, setTitle] = useState(memo.title);
   const [content, setContent] = useState(memo.content);
   const [tags, setTags] = useState<number[]>(memo.tag_ids);
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [imageAlt, setImageAlt] = useState<string>('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resizingIdRef = useRef<string | null>(null);
@@ -293,11 +296,14 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
                 remarkPlugins={[remarkGfm, remarkBreaks]}
                 rehypePlugins={[rehypeRaw]}
                 components={{
-                  img({ node, ...props }) {
-                    const id = (props as any)['data-id'] as string | undefined;
-                    const width = parseInt((props.style as React.CSSProperties)?.width as string) || 300;
+                  img(props: React.ImgHTMLAttributes<HTMLImageElement> & { 'data-id'?: string }) {
+                    const id = props['data-id'];
+                    const width =
+                      parseInt((props.style as React.CSSProperties)?.width as string) || 300;
                     return (
-                      <span className="inline-block relative" draggable={!readOnly}
+                      <span
+                        className="inline-block relative"
+                        draggable={!readOnly}
                         onDragStart={(e) => {
                           if (id) {
                             e.dataTransfer.setData('text/image-id', id);
@@ -310,7 +316,14 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
                           }
                         }}
                       >
-                        <img {...props} className="max-w-full" />
+                        <img
+                          {...props}
+                          className="max-w-full cursor-pointer"
+                          onClick={() => {
+                            setImageSrc(props.src || '');
+                            setImageAlt(props.alt as string || '');
+                          }}
+                        />
                         {!readOnly && id && (
                           <span
                             className="absolute w-3 h-3 bg-blue-500 bottom-0 right-0 cursor-se-resize"
@@ -329,6 +342,14 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
               >
                 {content}
               </Markdown>
+              {imageSrc && (
+                <ImageModal
+                  src={imageSrc}
+                  alt={imageAlt}
+                  isOpen={!!imageSrc}
+                  onClose={() => setImageSrc(null)}
+                />
+              )}
             </div>
           </div>
         </div>
