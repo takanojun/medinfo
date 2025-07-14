@@ -37,7 +37,7 @@ async def upload_image(
     db.add(img)
     db.commit()
     db.refresh(img)
-    return img
+    return schemas.NoteImageBase.from_orm(img)
 
 
 @router.get("/{image_id}")
