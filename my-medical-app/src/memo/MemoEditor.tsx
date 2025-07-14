@@ -264,7 +264,7 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
             <ImeTextarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="border p-1 flex-1"
+              className="border p-1 flex-1 overflow-auto"
               disabled={readOnly}
               ref={textareaRef}
               onDragOver={(e) => {
