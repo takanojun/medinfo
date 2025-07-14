@@ -180,15 +180,15 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-[70]"
+      className="fixed inset-0 bg-black bg-opacity-30 overflow-y-auto flex items-center justify-center z-[70]"
       onMouseDown={(e) => e.stopPropagation()}
     >
-      <div className="bg-white w-11/12 max-w-3xl p-4 rounded shadow flex flex-col h-[80%]">
+      <div className="bg-white w-11/12 max-w-3xl p-4 rounded shadow flex flex-col h-[80%] min-h-0">
         {message && (
           <div className="text-sm text-red-600 mb-2">{message}</div>
         )}
-        <div className="flex-1 flex flex-col md:flex-row gap-4">
-          <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0">
+          <div className="flex-1 flex flex-col min-h-0">
             <ImeInput
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -264,7 +264,7 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
             <ImeTextarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="border p-1 flex-1 overflow-auto"
+              className="border p-1 flex-1 overflow-y-auto resize-none"
               disabled={readOnly}
               ref={textareaRef}
               onDragOver={(e) => {
@@ -325,7 +325,7 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
               />
             </div>
           </div>
-          <div className="flex-1 overflow-auto p-2 border rounded bg-gray-50">
+          <div className="flex-1 overflow-y-auto p-2 border rounded bg-gray-50 min-h-0">
             <div
               className="prose max-w-none"
               onDragOver={(e) => {
