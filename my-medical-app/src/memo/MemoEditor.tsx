@@ -31,13 +31,40 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
   const resizingIdRef = useRef<string | null>(null);
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
+  const resizeDirRef = useRef<'left' | 'right'>('right');
   const dragPosRef = useRef(0);
+
+  const caretIndexFromPoint = (e: { clientX: number; clientY: number }): number => {
+    const ta = textareaRef.current;
+    if (!ta) return 0;
+    const rect = ta.getBoundingClientRect();
+    const x = e.clientX - rect.left + ta.scrollLeft;
+    const y = e.clientY - rect.top + ta.scrollTop;
+    const style = getComputedStyle(ta);
+    const lh = parseInt(style.lineHeight || '16', 10);
+    const approxLine = Math.floor(y / lh);
+    const lines = ta.value.split('\n');
+    let pos = 0;
+    for (let i = 0; i < lines.length; i++) {
+      if (i < approxLine) {
+        pos += lines[i].length + 1;
+      } else {
+        const line = lines[i] || '';
+        const cw = ta.clientWidth / Math.max(line.length, 1);
+        const approxChar = Math.floor(x / cw);
+        pos += Math.min(approxChar, line.length);
+        break;
+      }
+    }
+    return Math.min(pos, ta.value.length);
+  };
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
       if (!resizingIdRef.current) return;
       const dx = e.clientX - startXRef.current;
-      const newWidth = Math.max(50, startWidthRef.current + dx);
+      const delta = resizeDirRef.current === 'left' ? -dx : dx;
+      const newWidth = Math.max(50, startWidthRef.current + delta);
       updateImageWidth(resizingIdRef.current, newWidth);
     };
     const up = () => {
@@ -241,14 +268,21 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
               disabled={readOnly}
               ref={textareaRef}
               onDragOver={(e) => {
-                if (!readOnly) e.preventDefault();
+                if (readOnly) return;
+                e.preventDefault();
+                const pos = caretIndexFromPoint(e);
+                const ta = textareaRef.current;
+                if (ta) {
+                  ta.setSelectionRange(pos, pos);
+                  dragPosRef.current = pos;
+                }
               }}
               onDrop={(e) => {
                 if (readOnly) return;
                 const imgId = e.dataTransfer.getData('text/image-id');
                 if (imgId) {
                   e.preventDefault();
-                  const pos = (e.target as HTMLTextAreaElement).selectionStart || 0;
+                  const pos = dragPosRef.current;
                   const tag = extractTag(imgId);
                   if (tag) {
                     removeImage(imgId);
@@ -297,6 +331,12 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
               onDragOver={(e) => {
                 if (e.dataTransfer.getData('text/image-id')) {
                   e.preventDefault();
+                  const pos = caretIndexFromPoint(e);
+                  const ta = textareaRef.current;
+                  if (ta) {
+                    ta.setSelectionRange(pos, pos);
+                    dragPosRef.current = pos;
+                  }
                 }
               }}
               onDrop={(e) => {
@@ -347,16 +387,52 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
                           }}
                         />
                         {!readOnly && id && (
-                          <span
-                            className="absolute w-3 h-3 bg-blue-500 bottom-0 right-0 cursor-se-resize"
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              startXRef.current = e.clientX;
-                              startWidthRef.current = width;
-                              resizingIdRef.current = id;
-                            }}
-                          />
+                          <>
+                            <span
+                              className="absolute w-3 h-3 bg-blue-500 bottom-0 right-0 cursor-se-resize"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                startXRef.current = e.clientX;
+                                startWidthRef.current = width;
+                                resizeDirRef.current = 'right';
+                                resizingIdRef.current = id;
+                              }}
+                            />
+                            <span
+                              className="absolute w-3 h-3 bg-blue-500 bottom-0 left-0 cursor-sw-resize"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                startXRef.current = e.clientX;
+                                startWidthRef.current = width;
+                                resizeDirRef.current = 'left';
+                                resizingIdRef.current = id;
+                              }}
+                            />
+                            <span
+                              className="absolute w-3 h-3 bg-blue-500 top-0 right-0 cursor-ne-resize"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                startXRef.current = e.clientX;
+                                startWidthRef.current = width;
+                                resizeDirRef.current = 'right';
+                                resizingIdRef.current = id;
+                              }}
+                            />
+                            <span
+                              className="absolute w-3 h-3 bg-blue-500 top-0 left-0 cursor-nw-resize"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                startXRef.current = e.clientX;
+                                startWidthRef.current = width;
+                                resizeDirRef.current = 'left';
+                                resizingIdRef.current = id;
+                              }}
+                            />
+                          </>
                         )}
                       </span>
                     );
