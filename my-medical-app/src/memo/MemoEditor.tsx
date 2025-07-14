@@ -31,6 +31,7 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
   const resizingIdRef = useRef<string | null>(null);
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
+  const dragPosRef = useRef(0);
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
@@ -291,7 +292,26 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
             </div>
           </div>
           <div className="flex-1 overflow-auto p-2 border rounded bg-gray-50">
-            <div className="prose max-w-none">
+            <div
+              className="prose max-w-none"
+              onDragOver={(e) => {
+                if (e.dataTransfer.getData('text/image-id')) {
+                  e.preventDefault();
+                }
+              }}
+              onDrop={(e) => {
+                const imgId = e.dataTransfer.getData('text/image-id');
+                if (imgId) {
+                  e.preventDefault();
+                  const pos = dragPosRef.current;
+                  const tag = extractTag(imgId);
+                  if (tag) {
+                    removeImage(imgId);
+                    insertTagAt(tag, pos);
+                  }
+                }
+              }}
+            >
               <Markdown
                 remarkPlugins={[remarkGfm, remarkBreaks]}
                 rehypePlugins={[rehypeRaw]}
@@ -307,6 +327,8 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
                         onDragStart={(e) => {
                           if (id) {
                             e.dataTransfer.setData('text/image-id', id);
+                            const ta = textareaRef.current;
+                            dragPosRef.current = ta ? ta.selectionStart || 0 : 0;
                           }
                         }}
                         onContextMenu={(e) => {
@@ -329,6 +351,7 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
                             className="absolute w-3 h-3 bg-blue-500 bottom-0 right-0 cursor-se-resize"
                             onMouseDown={(e) => {
                               e.preventDefault();
+                              e.stopPropagation();
                               startXRef.current = e.clientX;
                               startWidthRef.current = width;
                               resizingIdRef.current = id;
