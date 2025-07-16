@@ -30,40 +30,40 @@ export default function ImageModal({ src, alt = '', isOpen, onClose }: Props) {
       <Dialog as="div" className="relative z-[90]" onClose={handleClose}>
         <div className="fixed inset-0 bg-black bg-opacity-50" />
         <div className="fixed inset-0 overflow-y-auto flex items-center justify-center p-4">
-          <Dialog.Panel className="bg-white rounded shadow relative p-4">
+          <Dialog.Panel className="bg-white rounded shadow relative p-4 w-[90vw] h-[90vh] flex flex-col">
             <button
               className="absolute top-1 right-1 text-xl leading-none"
               onClick={handleClose}
             >
               ×
             </button>
-            <div className="flex flex-col items-center">
+            <div className="flex-1 flex items-center justify-center overflow-hidden">
               <img
                 src={src}
                 alt={alt}
-                className="max-h-[80vh] max-w-[80vw]"
+                className="h-full w-full object-contain"
                 style={{ transform: `scale(${scale}) rotate(${rotate}deg)` }}
               />
-              <div className="mt-2 flex gap-2">
-                <button className="px-2 py-1 bg-gray-200 rounded" onClick={zoomIn}>
-                  +
-                </button>
-                <button className="px-2 py-1 bg-gray-200 rounded" onClick={zoomOut}>
-                  -
-                </button>
-                <button
-                  className="px-2 py-1 bg-gray-200 rounded"
-                  onClick={() => setRotate((r) => r - 90)}
-                >
-                  ↺
-                </button>
-                <button
-                  className="px-2 py-1 bg-gray-200 rounded"
-                  onClick={() => setRotate((r) => r + 90)}
-                >
-                  ↻
-                </button>
-              </div>
+            </div>
+            <div className="mt-2 flex justify-center gap-2">
+              <button className="px-2 py-1 bg-gray-200 rounded" onClick={zoomIn}>
+                +
+              </button>
+              <button className="px-2 py-1 bg-gray-200 rounded" onClick={zoomOut}>
+                -
+              </button>
+              <button
+                className="px-2 py-1 bg-gray-200 rounded"
+                onClick={() => setRotate((r) => r - 90)}
+              >
+                ↺
+              </button>
+              <button
+                className="px-2 py-1 bg-gray-200 rounded"
+                onClick={() => setRotate((r) => r + 90)}
+              >
+                ↻
+              </button>
             </div>
           </Dialog.Panel>
         </div>
