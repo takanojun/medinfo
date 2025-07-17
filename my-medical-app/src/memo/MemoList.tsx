@@ -16,6 +16,7 @@ interface Props {
   tagFilter: number[];
   onTagFilterChange: (v: number[]) => void;
   onCreate: () => void;
+  onMove: (id: number, direction: -1 | 1) => void;
   className?: string;
 }
 
@@ -31,6 +32,7 @@ export default function MemoList({
   tagFilter,
   onTagFilterChange,
   onCreate,
+  onMove,
   className = '',
 }: Props) {
   const options: Option[] = tagOptions.map((t) => ({
@@ -73,7 +75,7 @@ export default function MemoList({
       </button>
       <div className="flex-1 overflow-y-auto">
         <ul className="space-y-1">
-        {memos.map((m) => (
+        {memos.map((m, idx) => (
           <li
             key={m.id}
             className={`p-2 border rounded cursor-pointer ${
@@ -81,7 +83,23 @@ export default function MemoList({
             }`}
             onClick={() => onSelect(m.id)}
           >
-            {m.title}
+            <span className="mr-2">{m.title}</span>
+            <button
+              className="ml-2 px-1 text-sm bg-gray-200 rounded"
+              disabled={idx === 0}
+              onClick={(e) => {
+                e.stopPropagation();
+                onMove(m.id, -1);
+              }}
+            >↑</button>
+            <button
+              className="ml-1 px-1 text-sm bg-gray-200 rounded"
+              disabled={idx === memos.length - 1}
+              onClick={(e) => {
+                e.stopPropagation();
+                onMove(m.id, 1);
+              }}
+            >↓</button>
             {m.deleted && <span className="text-xs text-red-500 ml-2">(削除)</span>}
           </li>
         ))}

@@ -24,7 +24,16 @@ def read_memos(
     )
     if not include_deleted:
         query = query.filter(models.FacilityMemo.is_deleted == False)
-    memos = query.all()
+    memos = query.order_by(models.FacilityMemo.sort_order.asc()).all()
+    return memos
+
+
+@router.get("/general", response_model=List[schemas.FacilityMemoBase])
+def read_general_memos(include_deleted: bool = False, db: Session = Depends(get_db)):
+    query = db.query(models.FacilityMemo).filter(models.FacilityMemo.facility_id.is_(None))
+    if not include_deleted:
+        query = query.filter(models.FacilityMemo.is_deleted == False)
+    memos = query.order_by(models.FacilityMemo.sort_order.asc()).all()
     return memos
 
 
@@ -35,8 +44,18 @@ def create_memo(
     request: Request,
     db: Session = Depends(get_db),
 ):
+    max_order = (
+        db.query(models.FacilityMemo.sort_order)
+        .filter(models.FacilityMemo.facility_id == facility_id)
+        .order_by(models.FacilityMemo.sort_order.desc())
+        .first()
+    )
+    next_order = (max_order[0] + 1) if max_order else 1
     db_memo = models.FacilityMemo(
-        facility_id=facility_id, title=memo.title, content=memo.content
+        facility_id=facility_id,
+        title=memo.title,
+        content=memo.content,
+        sort_order=next_order,
     )
     db.add(db_memo)
     db.commit()
@@ -47,6 +66,46 @@ def create_memo(
     db.refresh(db_memo)
 
     # record initial version
+    client_ip = request.headers.get("X-Forwarded-For") or request.client.host
+    db.add(
+        models.FacilityMemoVersion(
+            memo_id=db_memo.id,
+            version_no=1,
+            content=db_memo.content,
+            ip_address=client_ip,
+            action="create",
+        )
+    )
+    db.commit()
+    return db_memo
+
+
+@router.post("/general", response_model=schemas.FacilityMemoBase)
+def create_general_memo(
+    memo: schemas.FacilityMemoCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    max_order = (
+        db.query(models.FacilityMemo.sort_order)
+        .filter(models.FacilityMemo.facility_id.is_(None))
+        .order_by(models.FacilityMemo.sort_order.desc())
+        .first()
+    )
+    next_order = (max_order[0] + 1) if max_order else 1
+    db_memo = models.FacilityMemo(
+        facility_id=None,
+        title=memo.title,
+        content=memo.content,
+        sort_order=next_order,
+    )
+    db.add(db_memo)
+    db.commit()
+    db.refresh(db_memo)
+    for tag_id in memo.tag_ids or []:
+        db.add(models.FacilityMemoTagLink(memo_id=db_memo.id, tag_id=tag_id))
+    db.commit()
+    db.refresh(db_memo)
     client_ip = request.headers.get("X-Forwarded-For") or request.client.host
     db.add(
         models.FacilityMemoVersion(
@@ -103,6 +162,10 @@ def update_memo(
         db_memo.content = update.content
     if update.title is not None:
         db_memo.title = update.title
+    if update.sort_order is not None:
+        db_memo.sort_order = update.sort_order
+    if update.facility_id is not None:
+        db_memo.facility_id = update.facility_id
     if update.tag_ids is not None:
         db.query(models.FacilityMemoTagLink).filter(
             models.FacilityMemoTagLink.memo_id == memo_id
@@ -300,3 +363,13 @@ def unlock_memo(memo_id: int, user: str, db: Session = Depends(get_db)):
         db.delete(lock)
         db.commit()
     return {"message": "unlocked"}
+
+
+@router.post("/reorder", response_model=dict)
+def reorder_memos(update: schemas.MemoOrderUpdate, db: Session = Depends(get_db)):
+    for item in update.orders:
+        db.query(models.FacilityMemo).filter(models.FacilityMemo.id == item.id).update(
+            {"sort_order": item.sort_order}
+        )
+    db.commit()
+    return {"message": "ok"}

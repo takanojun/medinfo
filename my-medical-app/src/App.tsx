@@ -1280,6 +1280,15 @@ export default function App() {
             </div>
           )}
         </div>
+        <button
+          className="ml-2 px-3 py-2 bg-gray-200 rounded"
+          onClick={() => {
+            const url = `memo.html?facilityId=0&facilityName=${encodeURIComponent('共通メモ')}`;
+            window.open(url, '_blank');
+          }}
+        >
+          共通メモ
+        </button>
       </div>
 
       <div className="flex-1 overflow-hidden px-4 pt-2 pb-4 flex flex-col">

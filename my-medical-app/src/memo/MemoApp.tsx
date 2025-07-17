@@ -12,6 +12,7 @@ export interface MemoItem {
   content: string;
   tag_ids: number[];
   deleted?: boolean;
+  sort_order: number;
 }
 
 export interface MemoTag {
@@ -29,6 +30,7 @@ interface FacilityMemoResponse {
   content: string | null;
   is_deleted: boolean;
   tags: MemoTag[];
+  sort_order: number;
 }
 
 const initialMemos: MemoItem[] = [];
@@ -59,13 +61,14 @@ const setCookie = (name: string, value: string) => {
 interface Props {
   facilityId: number
   facilityName: string
+  initialSelectedId?: number | null
 }
 
-export default function MemoApp({ facilityId, facilityName }: Props) {
+export default function MemoApp({ facilityId, facilityName, initialSelectedId }: Props) {
   const [memos, setMemos] = useState<MemoItem[]>(initialMemos);
   const [tagMaster, setTagMaster] = useState<MemoTag[]>([]);
   const [isTagMasterOpen, setIsTagMasterOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(initialSelectedId ?? null);
   const [editing, setEditing] = useState<MemoItem | null>(null);
   const [editingReadOnly, setEditingReadOnly] = useState(false);
   const [editingMessage, setEditingMessage] = useState<string | null>(null);
@@ -73,6 +76,31 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
   const [search, setSearch] = useState('');
   const [tagFilter, setTagFilter] = useState<number[]>([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  useEffect(() => {
+    if (initialSelectedId) {
+      setSelectedId(initialSelectedId);
+    }
+  }, [initialSelectedId]);
+
+  const reorderMemos = (newMemos: MemoItem[]) => {
+    setMemos(newMemos);
+    const orders = newMemos.map((m, i) => ({ id: m.id, sort_order: i + 1 }));
+    fetch(`${apiBase}/memos/reorder`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orders }),
+    }).then(fetchMemos);
+  };
+
+  const handleMove = (id: number, dir: -1 | 1) => {
+    const idx = memos.findIndex((m) => m.id === id);
+    if (idx === -1) return;
+    const newMemos = [...memos];
+    const [item] = newMemos.splice(idx, 1);
+    newMemos.splice(idx + dir, 0, item);
+    reorderMemos(newMemos);
+  };
 
   const fetchTags = useCallback(() => {
     fetch(`${apiBase}/memo-tags`)
@@ -98,8 +126,10 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
   }, []);
 
   const fetchMemos = useCallback(() => {
-    if (!facilityId) return;
-    fetch(`${apiBase}/memos/facility/${facilityId}?include_deleted=true`)
+    const url = facilityId
+      ? `${apiBase}/memos/facility/${facilityId}?include_deleted=true`
+      : `${apiBase}/memos/general?include_deleted=true`;
+    fetch(url)
       .then((res) => res.json())
       .then((data: FacilityMemoResponse[]) => {
         const list: MemoItem[] = data.map((m) => ({
@@ -108,7 +138,9 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
           content: m.content || '',
           tag_ids: (m.tags || []).map((t) => t.id),
           deleted: m.is_deleted,
+          sort_order: m.sort_order,
         }));
+        list.sort((a, b) => a.sort_order - b.sort_order);
         setMemos(list);
       });
   }, [facilityId]);
@@ -162,10 +194,9 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
 
   const handleSave = (memo: MemoItem) => {
     const method = memo.id === 0 ? 'POST' : 'PUT';
-    const url =
-      memo.id === 0
-        ? `${apiBase}/memos/facility/${facilityId}`
-        : `${apiBase}/memos/${memo.id}`;
+    const url = memo.id === 0
+      ? (facilityId ? `${apiBase}/memos/facility/${facilityId}` : `${apiBase}/memos/general`)
+      : `${apiBase}/memos/${memo.id}`;
     fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
@@ -232,10 +263,11 @@ export default function MemoApp({ facilityId, facilityName }: Props) {
             search={search}
             onSearch={setSearch}
             tagOptions={tagMaster}
-            tagFilter={tagFilter}
-            onTagFilterChange={setTagFilter}
-            onCreate={handleCreate}
-          />
+          tagFilter={tagFilter}
+          onTagFilterChange={setTagFilter}
+          onCreate={handleCreate}
+          onMove={handleMove}
+        />
         }
         right={
           <MemoViewer
