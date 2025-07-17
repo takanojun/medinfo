@@ -47,6 +47,17 @@ export default function MemoViewer({ memo, tagOptions, onEdit, onToggleDelete, o
           履歴
         </button>
         <button
+          className="bg-gray-500 text-white px-2 py-1 rounded"
+          onClick={() => {
+            const params = new URLSearchParams(window.location.search);
+            params.set('memoId', String(memo.id));
+            const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+            navigator.clipboard.writeText(url);
+          }}
+        >
+          リンクコピー
+        </button>
+        <button
           className="bg-red-500 text-white px-2 py-1 rounded"
           onClick={onToggleDelete}
         >

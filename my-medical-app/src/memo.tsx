@@ -6,6 +6,7 @@ import './index.css';
 const params = new URLSearchParams(window.location.search);
 const facilityId = Number(params.get('facilityId')) || 0;
 const facilityName = params.get('facilityName') || '';
+const initialSelectedId = params.get('memoId') ? Number(params.get('memoId')) : null;
 
 // ブラウザタブのタイトルを医療機関名に更新
 if (facilityName) {
@@ -14,6 +15,6 @@ if (facilityName) {
 
 createRoot(document.getElementById('memo-root')!).render(
   <React.StrictMode>
-    <MemoApp facilityId={facilityId} facilityName={facilityName} />
+    <MemoApp facilityId={facilityId} facilityName={facilityName} initialSelectedId={initialSelectedId} />
   </React.StrictMode>
 );

@@ -109,10 +109,11 @@ class FacilityMemo(Base):
     __tablename__ = "facility_memos"
 
     id = Column(Integer, primary_key=True)
-    facility_id = Column(Integer, ForeignKey("medical_facility.id"))
+    facility_id = Column(Integer, ForeignKey("medical_facility.id"), nullable=True)
     title = Column(Text, nullable=False)
     content = Column(Text)
     is_deleted = Column(Boolean, default=False)
+    sort_order = Column(Integer, default=0)
     updated_at = Column(TIMESTAMP, server_default="now()")
 
     facility = relationship("MedicalFacility")

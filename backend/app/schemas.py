@@ -193,10 +193,11 @@ class MemoTagCreate(BaseModel):
 
 class FacilityMemoBase(BaseModel):
     id: int
-    facility_id: int
+    facility_id: Optional[int]
     title: str
     content: Optional[str]
     is_deleted: bool
+    sort_order: int
     updated_at: Optional[datetime]
     tags: List[MemoTagBase] = []
 
@@ -208,6 +209,8 @@ class FacilityMemoCreate(BaseModel):
     title: str
     content: Optional[str] = None
     tag_ids: Optional[List[int]] = None
+    facility_id: Optional[int] = None
+    sort_order: Optional[int] = None
 
     @validator("title")
     def validate_title(cls, v: str) -> str:
@@ -220,6 +223,8 @@ class FacilityMemoUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
     tag_ids: Optional[List[int]] = None
+    facility_id: Optional[int] = None
+    sort_order: Optional[int] = None
 
 
 class FacilityMemoVersionBase(BaseModel):
@@ -243,6 +248,15 @@ class FacilityMemoLockBase(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class MemoOrderItem(BaseModel):
+    id: int
+    sort_order: int
+
+
+class MemoOrderUpdate(BaseModel):
+    orders: List[MemoOrderItem]
 
 
 class NoteImageBase(BaseModel):
