@@ -52,7 +52,24 @@ export default function MemoViewer({ memo, tagOptions, onEdit, onToggleDelete, o
             const params = new URLSearchParams(window.location.search);
             params.set('memoId', String(memo.id));
             const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
-            navigator.clipboard.writeText(url);
+            if (navigator.clipboard && window.isSecureContext) {
+              navigator.clipboard.writeText(url).catch((e) => console.error(e));
+            } else {
+              const textarea = document.createElement('textarea');
+              textarea.value = url;
+              textarea.style.position = 'fixed';
+              textarea.style.top = '-1000px';
+              textarea.style.left = '-1000px';
+              document.body.appendChild(textarea);
+              textarea.focus();
+              textarea.select();
+              try {
+                document.execCommand('copy');
+              } catch (e) {
+                console.error(e);
+              }
+              document.body.removeChild(textarea);
+            }
           }}
         >
           リンクコピー
