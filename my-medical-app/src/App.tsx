@@ -1519,6 +1519,10 @@ export default function App() {
             <tr className="text-left">
               {visibleColumnInfo.map((info, idx) => {
                 if (info.key.endsWith('-collapsed')) {
+                  const collapsedLabel =
+                    info.key === `${STICKY_GROUP_ID}-collapsed`
+                      ? columns.find((c) => c.key === 'short_name')?.label || '略名'
+                      : '';
                   return (
                     <th
                       ref={(el) => {
@@ -1536,7 +1540,9 @@ export default function App() {
                             } as React.CSSProperties)
                           : undefined
                       }
-                    ></th>
+                    >
+                      {collapsedLabel}
+                    </th>
                   );
                 }
                 const col = columns.find((c) => c.key === info.key)!;
@@ -1590,6 +1596,10 @@ export default function App() {
               >
                 {visibleColumnInfo.map((info, idx) => {
                   if (info.key.endsWith('-collapsed')) {
+                    const collapsedContent =
+                      info.key === `${STICKY_GROUP_ID}-collapsed`
+                        ? facility.short_name
+                        : '';
                     return (
                       <td
                         key={`${facility.id}-${info.key}`}
@@ -1599,12 +1609,16 @@ export default function App() {
                             ? ({
                                 position: 'sticky',
                                 left: stickyOffsets[idx] || 0,
-                                background: '#fff',
+                                background: selectedFacilityIds.includes(facility.id)
+                                  ? '#dbeafe'
+                                  : '#fff',
                                 zIndex: 2,
                               } as React.CSSProperties)
                             : undefined
                         }
-                      ></td>
+                      >
+                        {collapsedContent}
+                      </td>
                     );
                   }
                   const col = columns.find((c) => c.key === info.key)!;
@@ -1628,7 +1642,9 @@ export default function App() {
                             ? ({
                                 position: 'sticky',
                                 left: stickyOffsets[idx] || 0,
-                                background: '#fff',
+                                background: selectedFacilityIds.includes(facility.id)
+                                  ? '#dbeafe'
+                                  : '#fff',
                                 zIndex: 2,
                               } as React.CSSProperties)
                             : undefined
@@ -1672,7 +1688,9 @@ export default function App() {
                           ? ({
                               position: 'sticky',
                               left: stickyOffsets[idx] || 0,
-                              background: '#fff',
+                              background: selectedFacilityIds.includes(facility.id)
+                                ? '#dbeafe'
+                                : '#fff',
                               zIndex: 2,
                             } as React.CSSProperties)
                           : undefined
