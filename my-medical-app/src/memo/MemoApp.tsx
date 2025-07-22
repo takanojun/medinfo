@@ -166,7 +166,7 @@ export default function MemoApp({ facilityId, facilityName, initialSelectedId }:
   const selected = memos.find((m) => m.id === selectedId) || null;
 
   const handleCreate = () => {
-    const memo: MemoItem = { id: 0, title: '', content: '', tag_ids: [] };
+    const memo: MemoItem = { id: 0, title: '', content: '', tag_ids: [], sort_order: memos.length + 1 };
     setEditing(memo);
     setEditingReadOnly(false);
     setEditingMessage(null);
