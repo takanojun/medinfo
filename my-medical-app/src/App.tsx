@@ -120,6 +120,13 @@ export default function App() {
   const [headerContextMenu, setHeaderContextMenu] = useState<{ x: number; y: number; key: string } | null>(null);
   const [rowContextMenu, setRowContextMenu] = useState<{ x: number; y: number; facility: Facility } | null>(null);
 
+  // 行選択用
+  const [selectedFacilityIds, setSelectedFacilityIds] = useState<number[]>([]);
+  const dragStartIndexRef = useRef<number | null>(null);
+  const dragAddRef = useRef(false);
+  const baseSelectionRef = useRef<number[]>([]);
+  const draggingRef = useRef(false);
+
   // 機能マスタ・カテゴリマスタ用検索/フィルタ
   const [functionListSearchText, setFunctionListSearchText] = useState('');
   const [functionListSearchMode, setFunctionListSearchMode] = useState<'AND' | 'OR'>('AND');
@@ -177,6 +184,17 @@ export default function App() {
       window.removeEventListener('contextmenu', handleOutside);
     };
   }, [isMenuOpen]);
+
+  useEffect(() => {
+    const handleMouseUp = () => {
+      draggingRef.current = false;
+      dragStartIndexRef.current = null;
+    };
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
 
   // 医療機関編集モーダル用
   const [isFacilityModalOpen, setIsFacilityModalOpen] = useState(false);
@@ -716,6 +734,65 @@ export default function App() {
 
   const handleHideFacility = (id: number) => {
     setVisibleFacilities((prev) => ({ ...prev, [id]: false }));
+  };
+
+  const handleRowMouseDown = (
+    e: React.MouseEvent<HTMLTableRowElement, MouseEvent>,
+    index: number,
+    id: number,
+  ) => {
+    if (e.button !== 0) return;
+    draggingRef.current = true;
+    dragStartIndexRef.current = index;
+    dragAddRef.current = e.ctrlKey;
+    baseSelectionRef.current = selectedFacilityIds;
+    if (!e.ctrlKey) {
+      setSelectedFacilityIds([id]);
+    }
+  };
+
+  const handleRowMouseEnter = (
+    index: number,
+  ) => {
+    if (!draggingRef.current || dragStartIndexRef.current === null) return;
+    const start = dragStartIndexRef.current;
+    const ids = displayFacilities
+      .slice(Math.min(start, index), Math.max(start, index) + 1)
+      .map((f) => f.id);
+    if (dragAddRef.current) {
+      setSelectedFacilityIds(
+        Array.from(new Set([...baseSelectionRef.current, ...ids])),
+      );
+    } else {
+      setSelectedFacilityIds(ids);
+    }
+  };
+
+  const handleRowMouseUp = (
+    index: number,
+    id: number,
+  ) => {
+    if (!draggingRef.current) return;
+    const start = dragStartIndexRef.current ?? index;
+    const ids = displayFacilities
+      .slice(Math.min(start, index), Math.max(start, index) + 1)
+      .map((f) => f.id);
+    if (dragAddRef.current) {
+      if (start === index && ids.length === 1) {
+        const base = baseSelectionRef.current;
+        const exists = base.includes(id);
+        const newSel = exists ? base.filter((v) => v !== id) : [...base, id];
+        setSelectedFacilityIds(newSel);
+      } else {
+        setSelectedFacilityIds(
+          Array.from(new Set([...baseSelectionRef.current, ...ids])),
+        );
+      }
+    } else {
+      setSelectedFacilityIds(ids);
+    }
+    draggingRef.current = false;
+    dragStartIndexRef.current = null;
   };
 
   const handleRightClick = (
@@ -1422,8 +1499,14 @@ export default function App() {
             </tr>
           </thead>
           <tbody>
-            {displayFacilities.map((facility) => (
-              <tr key={facility.id} className="hover:bg-gray-50">
+            {displayFacilities.map((facility, idx) => (
+              <tr
+                key={facility.id}
+                className={`hover:bg-gray-50 cursor-pointer select-none ${selectedFacilityIds.includes(facility.id) ? 'bg-blue-100' : ''}`}
+                onMouseDown={(e) => handleRowMouseDown(e, idx, facility.id)}
+                onMouseEnter={() => handleRowMouseEnter(idx)}
+                onMouseUp={() => handleRowMouseUp(idx, facility.id)}
+              >
                 {columnGroups.map((g) => {
                   if (!visibleGroups[g.id]) return null;
                   const colsInGroup = columns.filter(
