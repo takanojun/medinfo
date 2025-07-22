@@ -1,11 +1,14 @@
 // App.tsx
-import React, { useEffect, useState, Fragment, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useState, Fragment, useRef } from 'react';
 import { Dialog, Transition, Switch } from '@headlessui/react';
 import './App.css';
 import ImeInput from './components/ImeInput';
 import ImeTextarea from './components/ImeTextarea';
 
 const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+
+// 行ヘッダーとして固定する列グループID
+const STICKY_GROUP_ID = 'facility';
 
 const setCookie = (name: string, value: string) => {
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/`;
@@ -127,6 +130,10 @@ export default function App() {
   const baseSelectionRef = useRef<number[]>([]);
   const draggingRef = useRef(false);
 
+  // 固定列のオフセット計算用
+  const headerRefs = useRef<HTMLTableCellElement[]>([]);
+  const [stickyOffsets, setStickyOffsets] = useState<number[]>([]);
+
   // 機能マスタ・カテゴリマスタ用検索/フィルタ
   const [functionListSearchText, setFunctionListSearchText] = useState('');
   const [functionListSearchMode, setFunctionListSearchMode] = useState<'AND' | 'OR'>('AND');
@@ -152,6 +159,17 @@ export default function App() {
     window.addEventListener('click', closeMenus);
     return () => window.removeEventListener('click', closeMenus);
   }, []);
+
+  useLayoutEffect(() => {
+    const widths = headerRefs.current.map((el) => el?.offsetWidth || 0);
+    const offsets: number[] = [];
+    let acc = 0;
+    for (let i = 0; i < widths.length; i++) {
+      offsets[i] = acc;
+      acc += widths[i];
+    }
+    setStickyOffsets(offsets);
+  }, [visibleColumns, visibleGroups, collapsedGroups, functionOrder, facilities]);
 
   const matchesKeywords = (
     text: string,
@@ -642,6 +660,44 @@ export default function App() {
         group: `cat_${func.category_id}`,
       })),
   ];
+
+  const visibleColumnInfo = React.useMemo(() => {
+    const list: { key: string; group: string }[] = [];
+    columnGroups.forEach((g) => {
+      if (!visibleGroups[g.id]) return;
+      const colsInGroup = columns.filter(
+        (c) => c.group === g.id && visibleColumns[c.key] && !tempHiddenColumns[c.key],
+      );
+      if (colsInGroup.length === 0) return;
+      if (collapsedGroups[g.id]) {
+        list.push({ key: `${g.id}-collapsed`, group: g.id });
+      } else {
+        colsInGroup.forEach((c) => list.push({ key: c.key, group: g.id }));
+      }
+    });
+    return list;
+  }, [columnGroups, columns, visibleGroups, visibleColumns, collapsedGroups, tempHiddenColumns]);
+
+  const groupPositions = React.useMemo(() => {
+    const pos: Record<string, { start: number; span: number }> = {};
+    let idx = 0;
+    columnGroups.forEach((g) => {
+      if (!visibleGroups[g.id]) return;
+      const colsInGroup = columns.filter(
+        (c) => c.group === g.id && visibleColumns[c.key] && !tempHiddenColumns[c.key],
+      );
+      if (colsInGroup.length === 0) return;
+      const span = collapsedGroups[g.id] ? 1 : colsInGroup.length;
+      pos[g.id] = { start: idx, span };
+      idx += span;
+    });
+    return pos;
+  }, [columnGroups, columns, visibleGroups, visibleColumns, collapsedGroups, tempHiddenColumns]);
+
+  const stickyColumnCount = React.useMemo(() => {
+    const pos = groupPositions[STICKY_GROUP_ID];
+    return pos ? pos.start + pos.span : 0;
+  }, [groupPositions]);
 
   const searchTargetOptions = [
     { key: 'id', label: 'ID' },
@@ -1269,6 +1325,8 @@ export default function App() {
       ),
     );
 
+  headerRefs.current = [];
+
   return (
     <div className="bg-gray-100 h-screen p-0 overflow-hidden flex flex-col">
       {notification && (
@@ -1426,21 +1484,24 @@ export default function App() {
           <thead className="sticky top-0 z-10 bg-gray-200">
             <tr>
               {columnGroups.map((g) => {
-                if (!visibleGroups[g.id]) return null;
-                const colsInGroup = columns.filter(
-                  (c) =>
-                    c.group === g.id &&
-                    visibleColumns[c.key] &&
-                    !tempHiddenColumns[c.key],
-                );
-                if (colsInGroup.length === 0) return null;
-                const span = collapsedGroups[g.id] ? 1 : colsInGroup.length;
+                const pos = groupPositions[g.id];
+                if (!visibleGroups[g.id] || !pos) return null;
+                const style: React.CSSProperties | undefined =
+                  pos.start < stickyColumnCount
+                    ? ({
+                        position: 'sticky',
+                        left: stickyOffsets[pos.start] || 0,
+                        zIndex: 5,
+                        background: '#e5e7eb',
+                      } as React.CSSProperties)
+                    : undefined;
                 return (
                   <th
                     key={g.id}
-                    colSpan={span}
+                    colSpan={pos.span}
                     className="border px-2 cursor-pointer"
                     onClick={() => toggleCollapse(g.id)}
+                    style={style}
                   >
                     <div className="flex items-center justify-between">
                       <span>{g.label}</span>
@@ -1456,45 +1517,65 @@ export default function App() {
               })}
             </tr>
             <tr className="text-left">
-              {columnGroups.map((g) => {
-                if (!visibleGroups[g.id]) return null;
-                const colsInGroup = columns.filter(
-                  (c) =>
-                    c.group === g.id &&
-                    visibleColumns[c.key] &&
-                    !tempHiddenColumns[c.key],
-                );
-                if (colsInGroup.length === 0) return null;
-                if (collapsedGroups[g.id]) {
-                  return (
-                    <th key={`${g.id}-collapsed`} className="py-2 px-4 border whitespace-nowrap"></th>
-                  );
-                }
-                return colsInGroup.map((col) => {
-                  const isFunc = col.key.startsWith('func_');
-                  const memo = isFunc
-                    ?
-                        allFunctions.find(
-                          (f) => f.id === parseInt(col.key.replace('func_', ''))
-                        )?.memo || ''
-                    : '';
+              {visibleColumnInfo.map((info, idx) => {
+                if (info.key.endsWith('-collapsed')) {
                   return (
                     <th
-                      key={col.key}
-                      className={
-                        'py-2 px-4 border cursor-pointer whitespace-nowrap' +
-                        (isFunc && memo ? ' tooltip-container' : '')
+                      ref={(el) => {
+                        if (el) headerRefs.current[idx] = el;
+                      }}
+                      key={info.key}
+                      className="py-2 px-4 border whitespace-nowrap"
+                      style={
+                        idx < stickyColumnCount
+                          ? ({
+                              position: 'sticky',
+                              left: stickyOffsets[idx] || 0,
+                              zIndex: 5,
+                              background: '#e5e7eb',
+                            } as React.CSSProperties)
+                          : undefined
                       }
-                      onClick={() => handleSort(col.key)}
-                      onContextMenu={(e) => handleHeaderContextMenu(e, col.key)}
-                      data-tooltip={isFunc && memo ? memo : undefined}
-                    >
-                      {col.label}{' '}
-                      {sortKey === col.key && sortOrder !== 'none' &&
-                        (sortOrder === 'asc' ? '▲' : '▼')}
-                    </th>
+                    ></th>
                   );
-                });
+                }
+                const col = columns.find((c) => c.key === info.key)!;
+                const isFunc = col.key.startsWith('func_');
+                const memo = isFunc
+                  ?
+                      allFunctions.find(
+                        (f) => f.id === parseInt(col.key.replace('func_', '')),
+                      )?.memo || ''
+                  : '';
+                return (
+                  <th
+                    ref={(el) => {
+                      if (el) headerRefs.current[idx] = el;
+                    }}
+                    key={col.key}
+                    className={
+                      'py-2 px-4 border cursor-pointer whitespace-nowrap' +
+                      (isFunc && memo ? ' tooltip-container' : '')
+                    }
+                    onClick={() => handleSort(col.key)}
+                    onContextMenu={(e) => handleHeaderContextMenu(e, col.key)}
+                    data-tooltip={isFunc && memo ? memo : undefined}
+                    style={
+                      idx < stickyColumnCount
+                        ? ({
+                            position: 'sticky',
+                            left: stickyOffsets[idx] || 0,
+                            zIndex: 5,
+                            background: '#e5e7eb',
+                          } as React.CSSProperties)
+                        : undefined
+                    }
+                  >
+                    {col.label}{' '}
+                    {sortKey === col.key && sortOrder !== 'none' &&
+                      (sortOrder === 'asc' ? '▲' : '▼')}
+                  </th>
+                );
               })}
             </tr>
           </thead>
@@ -1507,111 +1588,126 @@ export default function App() {
                 onMouseEnter={() => handleRowMouseEnter(idx)}
                 onMouseUp={() => handleRowMouseUp(idx, facility.id)}
               >
-                {columnGroups.map((g) => {
-                  if (!visibleGroups[g.id]) return null;
-                  const colsInGroup = columns.filter(
-                    (c) =>
-                      c.group === g.id &&
-                      visibleColumns[c.key] &&
-                      !tempHiddenColumns[c.key],
-                  );
-                  if (colsInGroup.length === 0) return null;
-                  if (collapsedGroups[g.id]) {
+                {visibleColumnInfo.map((info, idx) => {
+                  if (info.key.endsWith('-collapsed')) {
                     return (
                       <td
-                        key={`${facility.id}-${g.id}`}
+                        key={`${facility.id}-${info.key}`}
                         className="py-2 px-4 border"
+                        style={
+                          idx < stickyColumnCount
+                            ? ({
+                                position: 'sticky',
+                                left: stickyOffsets[idx] || 0,
+                                background: '#fff',
+                                zIndex: 2,
+                              } as React.CSSProperties)
+                            : undefined
+                        }
                       ></td>
                     );
                   }
-                  return colsInGroup.map((col) => {
-                    if (col.key.startsWith('func_')) {
-                      const funcId = parseInt(col.key.replace('func_', ''));
-                      const fEntry = facility.functions.find(
-                        (f) => f.function.id === funcId
-                      );
-                      const remarks = fEntry?.remarks || '';
-                      return (
-                        <td
-                          key={col.key}
-                          className={
-                            'py-2 px-4 border whitespace-nowrap' +
-                            (remarks ? ' tooltip-container' : '')
-                          }
-                          data-tooltip={remarks || undefined}
-                          onContextMenu={(e) =>
-                            handleRightClick(e, facility.id, funcId)
-                          }
-                        >
-                          {fEntry ? (
-                            <div className="flex flex-col">
-                              {fEntry.selected_values.map((v, i) => (
-                                <div key={i}>{v}</div>
+                  const col = columns.find((c) => c.key === info.key)!;
+                  if (col.key.startsWith('func_')) {
+                    const funcId = parseInt(col.key.replace('func_', ''));
+                    const fEntry = facility.functions.find(
+                      (f) => f.function.id === funcId,
+                    );
+                    const remarks = fEntry?.remarks || '';
+                    return (
+                      <td
+                        key={col.key}
+                        className={
+                          'py-2 px-4 border whitespace-nowrap' +
+                          (remarks ? ' tooltip-container' : '')
+                        }
+                        data-tooltip={remarks || undefined}
+                        onContextMenu={(e) => handleRightClick(e, facility.id, funcId)}
+                        style={
+                          idx < stickyColumnCount
+                            ? ({
+                                position: 'sticky',
+                                left: stickyOffsets[idx] || 0,
+                                background: '#fff',
+                                zIndex: 2,
+                              } as React.CSSProperties)
+                            : undefined
+                        }
+                      >
+                        {fEntry ? (
+                          <div className="flex flex-col">
+                            {fEntry.selected_values.map((v, i) => (
+                              <div key={i}>{v}</div>
+                            ))}
+                            {showFunctionRemarks && fEntry.remarks && (
+                              (() => {
+                                const lines = fEntry.remarks.split('\n');
+                                const display = lines.slice(0, 2);
+                                const truncated = lines.length > 2;
+                                return (
+                                  <>
+                                    {display.map((l, i) => (
+                                      <div key={i}>{l}</div>
+                                    ))}
+                                    {truncated && <div>...</div>}
+                                  </>
+                                );
+                              })()
+                            )}
+                          </div>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                    );
+                  }
+                  const val = (facility as unknown as Record<string, unknown>)[col.key];
+                  return (
+                    <td
+                      key={col.key}
+                      className="py-2 px-4 border whitespace-nowrap"
+                      onContextMenu={(e) => handleFacilityCellRightClick(e, facility)}
+                      style={
+                        idx < stickyColumnCount
+                          ? ({
+                              position: 'sticky',
+                              left: stickyOffsets[idx] || 0,
+                              background: '#fff',
+                              zIndex: 2,
+                            } as React.CSSProperties)
+                          : undefined
+                      }
+                    >
+                      {Array.isArray(val) ? (
+                        <div className="flex flex-col">
+                          {(val as ContactInfo[])
+                            .map((v) =>
+                              v.value ? `${v.value}${v.comment ? `（${v.comment}）` : ''}` : '',
+                            )
+                            .filter((v) => v)
+                            .map((v, i) => (
+                              <div key={i}>{v}</div>
+                            ))}
+                        </div>
+                      ) : col.key === 'remarks' && typeof val === 'string' ? (
+                        (() => {
+                          const lines = val.split('\n');
+                          const display = lines.slice(0, 3);
+                          const truncated = lines.length > 3;
+                          return (
+                            <div className="flex flex-col tooltip-container" data-tooltip={val}>
+                              {display.map((l, i) => (
+                                <div key={i}>{l}</div>
                               ))}
-                              {showFunctionRemarks && fEntry.remarks && (
-                                (() => {
-                                  const lines = fEntry.remarks.split('\n');
-                                  const display = lines.slice(0, 2);
-                                  const truncated = lines.length > 2;
-                                  return (
-                                    <>
-                                      {display.map((l, i) => (
-                                        <div key={i}>{l}</div>
-                                      ))}
-                                      {truncated && <div>...</div>}
-                                    </>
-                                  );
-                                })()
-                              )}
+                              {truncated && <div>...</div>}
                             </div>
-                          ) : (
-                            '-'
-                          )}
-                        </td>
-                      );
-                    } else {
-                      const val = (facility as unknown as Record<string, unknown>)[col.key];
-                      return (
-                        <td
-                          key={col.key}
-                          className="py-2 px-4 border whitespace-nowrap"
-                          onContextMenu={(e) => handleFacilityCellRightClick(e, facility)}
-                        >
-                          {Array.isArray(val) ? (
-                            <div className="flex flex-col">
-                              {(val as ContactInfo[])
-                                .map((v) =>
-                                  v.value ? `${v.value}${v.comment ? `（${v.comment}）` : ''}` : ''
-                                )
-                                .filter((v) => v)
-                                .map((v, i) => (
-                                  <div key={i}>{v}</div>
-                                ))}
-                            </div>
-                          ) : col.key === 'remarks' && typeof val === 'string' ? (
-                            (() => {
-                              const lines = val.split('\n');
-                              const display = lines.slice(0, 3);
-                              const truncated = lines.length > 3;
-                              return (
-                                <div
-                                  className="flex flex-col tooltip-container"
-                                  data-tooltip={val}
-                                >
-                                  {display.map((l, i) => (
-                                    <div key={i}>{l}</div>
-                                  ))}
-                                  {truncated && <div>...</div>}
-                                </div>
-                              );
-                            })()
-                          ) : (
-                            (val as React.ReactNode) || '-'
-                          )}
-                        </td>
-                      ) as React.ReactNode;
-                    }
-                  });
+                          );
+                        })()
+                      ) : (
+                        (val as React.ReactNode) || '-'
+                      )}
+                    </td>
+                  );
                 })}
               </tr>
             ))}
