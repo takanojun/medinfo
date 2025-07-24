@@ -859,10 +859,10 @@ export default function App() {
     e.preventDefault();
     const facility = facilities.find((f) => f.id === facilityId);
     let entry = facility?.functions.find((f) => f.function.id === funcId);
+    const funcMaster = allFunctions.find((f) => f.id === funcId) || entry?.function;
 
     if (!entry) {
       // 機能が未設定の場合は、新規の空エントリを作る
-      const funcMaster = allFunctions.find((f) => f.id === funcId);
       if (funcMaster) {
         entry = {
           id: 0, // IDは仮（新規登録時にAPIで決まる）
@@ -871,6 +871,18 @@ export default function App() {
           function: funcMaster,
         };
       }
+    } else if (funcMaster) {
+      // マスタ変更後に残った値を除外
+      entry = {
+        ...entry,
+        function: funcMaster,
+        selected_values:
+          funcMaster.selection_type === 'multiple'
+            ? entry.selected_values.filter((v) =>
+                (funcMaster.choices || []).includes(v),
+              )
+            : entry.selected_values,
+      };
     }
 
     if (entry) {
