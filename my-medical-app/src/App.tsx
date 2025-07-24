@@ -1,5 +1,11 @@
 // App.tsx
-import React, { useEffect, useLayoutEffect, useState, Fragment, useRef } from 'react';
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useState,
+  Fragment,
+  useRef,
+} from 'react';
 import { Dialog, Transition, Switch } from '@headlessui/react';
 import './App.css';
 import ImeInput from './components/ImeInput';
@@ -19,6 +25,40 @@ const getCookie = (name: string): string | null => {
     .split('; ')
     .find((row) => row.startsWith(`${name}=`));
   return match ? decodeURIComponent(match.split('=')[1]) : null;
+};
+
+const renderTextWithLinks = (text: string) => {
+  const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s]+)/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let linkIdx = 1;
+  while ((match = linkRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    const label = match[1] ? match[1] : `リンク${linkIdx}`;
+    const url = match[2] ? match[2] : match[3];
+    parts.push(
+      <a
+        key={match.index}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-600 underline"
+      >
+        {label}
+      </a>,
+    );
+    if (!match[1]) {
+      linkIdx += 1;
+    }
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  return parts;
 };
 
 interface FacilityFunctionEntry {
@@ -1657,7 +1697,7 @@ export default function App() {
                                 return (
                                   <>
                                     {display.map((l, i) => (
-                                      <div key={i}>{l}</div>
+                                      <div key={i}>{renderTextWithLinks(l)}</div>
                                     ))}
                                     {truncated && <div>...</div>}
                                   </>
