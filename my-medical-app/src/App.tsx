@@ -1559,13 +1559,10 @@ export default function App() {
                       if (el) headerRefs.current[idx] = el;
                     }}
                     key={col.key}
-                    className={
-                      'py-2 px-4 border cursor-pointer whitespace-nowrap' +
-                      (isFunc && memo ? ' tooltip-container' : '')
-                    }
+                    className="py-2 px-4 border cursor-pointer whitespace-nowrap"
                     onClick={() => handleSort(col.key)}
                     onContextMenu={(e) => handleHeaderContextMenu(e, col.key)}
-                    data-tooltip={isFunc && memo ? memo : undefined}
+                    title={isFunc && memo ? memo : undefined}
                     style={
                       idx < stickyColumnCount
                         ? ({
@@ -1629,13 +1626,10 @@ export default function App() {
                     );
                     const remarks = fEntry?.remarks || '';
                     return (
-                      <td
+                    <td
                         key={col.key}
-                        className={
-                          'py-2 px-4 border whitespace-nowrap' +
-                          (remarks ? ' tooltip-container' : '')
-                        }
-                        data-tooltip={remarks || undefined}
+                        className="py-2 px-4 border whitespace-nowrap"
+                        title={remarks || undefined}
                         onContextMenu={(e) => handleRightClick(e, facility.id, funcId)}
                         style={
                           idx < stickyColumnCount
@@ -1713,7 +1707,7 @@ export default function App() {
                           const display = lines.slice(0, 3);
                           const truncated = lines.length > 3;
                           return (
-                            <div className="flex flex-col tooltip-container" data-tooltip={val}>
+                            <div className="flex flex-col" title={val}>
                               {display.map((l, i) => (
                                 <div key={i}>{l}</div>
                               ))}
