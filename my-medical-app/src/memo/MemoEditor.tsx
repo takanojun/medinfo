@@ -6,8 +6,8 @@ import remarkBreaks from 'remark-breaks';
 import rehypeRaw from 'rehype-raw';
 import ImeInput from '../components/ImeInput';
 import ImeTextarea from '../components/ImeTextarea';
-import MultiSelect from '../components/MultiSelect';
-import type { Option } from '../components/MultiSelect';
+import TagSearchInput from '../components/TagSearchInput';
+import type { Option } from '../components/TagSearchInput';
 import type { MemoItem, MemoTag } from './MemoApp';
 
 interface Props {
@@ -316,7 +316,7 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
                   タグ管理
                 </button>
               )}
-              <MultiSelect
+              <TagSearchInput
                 options={options}
                 selected={tags}
                 onChange={setTags}
