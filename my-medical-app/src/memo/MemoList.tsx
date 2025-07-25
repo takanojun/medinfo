@@ -197,7 +197,10 @@ function MemoNode({ node, depth, selectedId, onSelect, onDrop, expanded, toggle 
       onDragStart={handleDragStart}
       onDrop={handleDropNode}
       onDragOver={handleDragOver}
-      onClick={() => onSelect(node.id)}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect(node.id);
+      }}
     >
       <div className="flex items-center">
         {node.children.length > 0 && (
