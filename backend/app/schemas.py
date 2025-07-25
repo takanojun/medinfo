@@ -272,7 +272,6 @@ class NoteImageBase(BaseModel):
 
     class Config:
         from_attributes = True
-        orm_mode = True
 
 
 class NoteImageCreate(BaseModel):
@@ -353,4 +352,3 @@ class MemoTemplateOrderItem(BaseModel):
 
 class MemoTemplateOrderUpdate(BaseModel):
     orders: List[MemoTemplateOrderItem]
-
