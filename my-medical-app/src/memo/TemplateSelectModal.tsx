@@ -1,7 +1,8 @@
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment, useEffect, useState } from 'react';
 import ImeInput from '../components/ImeInput';
-import TagSearchInput, { Option } from '../components/TagSearchInput';
+import TagSearchInput from '../components/TagSearchInput';
+import type { Option } from '../components/TagSearchInput';
 import type { MemoTag } from './MemoApp';
 
 interface Template {
