@@ -338,7 +338,15 @@ export default function MemoApp({ facilityId, facilityName, initialSelectedId }:
           tagOptions={tagMaster}
           onClose={() => setIsTemplateOpen(false)}
           onSelect={(tpl) => {
-            setEditing((prev) => prev && { ...prev, title: tpl.title, content: tpl.content, tag_ids: tpl.tag_ids });
+            setEditing(
+              (prev) =>
+                prev && {
+                  ...prev,
+                  title: tpl.title,
+                  content: tpl.content || '',
+                  tag_ids: tpl.tag_ids,
+                },
+            );
             setIsTemplateOpen(false);
           }}
         />
