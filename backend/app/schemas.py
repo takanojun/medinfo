@@ -194,6 +194,7 @@ class MemoTagCreate(BaseModel):
 class FacilityMemoBase(BaseModel):
     id: int
     facility_id: Optional[int]
+    parent_id: Optional[int]
     title: str
     content: Optional[str]
     is_deleted: bool
@@ -210,6 +211,7 @@ class FacilityMemoCreate(BaseModel):
     content: Optional[str] = None
     tag_ids: Optional[List[int]] = None
     facility_id: Optional[int] = None
+    parent_id: Optional[int] = None
     sort_order: Optional[int] = None
 
     @validator("title")
@@ -224,6 +226,7 @@ class FacilityMemoUpdate(BaseModel):
     content: Optional[str] = None
     tag_ids: Optional[List[int]] = None
     facility_id: Optional[int] = None
+    parent_id: Optional[int] = None
     sort_order: Optional[int] = None
 
 
@@ -253,6 +256,7 @@ class FacilityMemoLockBase(BaseModel):
 class MemoOrderItem(BaseModel):
     id: int
     sort_order: int
+    parent_id: Optional[int] = None
 
 
 class MemoOrderUpdate(BaseModel):
