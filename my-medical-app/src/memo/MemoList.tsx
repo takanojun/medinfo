@@ -1,7 +1,7 @@
 import type { MemoItem } from './MemoApp';
 import ImeInput from '../components/ImeInput';
-import MultiSelect from '../components/MultiSelect';
-import type { Option } from '../components/MultiSelect';
+import TagSearchInput from '../components/TagSearchInput';
+import type { Option } from '../components/TagSearchInput';
 import type { MemoTag } from './MemoApp';
 
 interface Props {
@@ -60,7 +60,7 @@ export default function MemoList({
           削除済み
         </label>
       </div>
-      <MultiSelect
+      <TagSearchInput
         options={options}
         selected={tagFilter}
         onChange={onTagFilterChange}
