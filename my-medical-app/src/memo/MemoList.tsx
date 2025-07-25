@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { MemoItem } from './MemoApp';
 
 type MemoTreeItem = MemoItem & { children: MemoTreeItem[] };
@@ -46,6 +46,15 @@ export default function MemoList({
 
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
+  // Expand all nodes by default and include newly added memos
+  useEffect(() => {
+    setExpanded((prev) => {
+      const all = new Set(prev);
+      memos.forEach((m) => all.add(m.id));
+      return all;
+    });
+  }, [memos]);
+
   const toggle = (id: number) => {
     setExpanded((prev) => {
       const n = new Set(prev);
@@ -74,7 +83,21 @@ export default function MemoList({
     return roots;
   };
 
+  const isDescendantOf = (id: number | null, ancestor: number): boolean => {
+    let current = memos.find((m) => m.id === id);
+    while (current) {
+      if (current.parent_id === ancestor) return true;
+      current =
+        current.parent_id != null
+          ? memos.find((m) => m.id === current!.parent_id)
+          : undefined;
+    }
+    return false;
+  };
+
   const handleDrop = (dragId: number, targetId: number | null) => {
+    if (dragId === targetId) return;
+    if (targetId !== null && isDescendantOf(targetId, dragId)) return;
     const newMemos = memos.map((m) =>
       m.id === dragId ? { ...m, parent_id: targetId } : m
     );
@@ -113,15 +136,15 @@ export default function MemoList({
       >
         ＋新規作成
       </button>
-      <div className="flex-1 overflow-y-auto">
-        <ul
-          className="space-y-1"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
-            const dragId = Number(e.dataTransfer.getData('text/plain'));
-            handleDrop(dragId, null);
-          }}
-        >
+      <div
+        className="flex-1 overflow-y-auto"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          const dragId = Number(e.dataTransfer.getData('text/plain'));
+          handleDrop(dragId, null);
+        }}
+      >
+        <ul className="space-y-1">
           {tree().map((node) => (
             <MemoNode
               key={node.id}
