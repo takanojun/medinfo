@@ -180,6 +180,7 @@ export default function MemoList({
     beforeId: number | null,
     parentId: number | null,
   ) => {
+  console.log('handleDropAt called', { dragId, beforeId, parentId });
     if (dragId === beforeId) return;
     if (parentId !== null && isAncestorOrSelf(parentId, dragId)) return;
     // prevent dropping a node before one of its own descendants
@@ -267,9 +268,11 @@ interface DropZoneProps {
 
 function DropZone({ onDrop }: DropZoneProps) {
   const [over, setOver] = useState(false);
+
   return (
     <li
-      className="relative h-2 my-1"
+      // 高さは常に 1px だけ確保（ほぼ見えない）
+      className="relative h-px my-0"   // h-px = 1px, my-0 = 余白ゼロ
       onDragOver={(e) => {
         e.preventDefault();
         if (!over) setOver(true);
@@ -283,14 +286,17 @@ function DropZone({ onDrop }: DropZoneProps) {
         e.preventDefault();
       }}
     >
+      {/* 線だけを描画するレイヤー。普段は透明なので“改行”に見えない */}
       <div
-        className={`absolute inset-0 border-t-2 ${
+        className={`absolute inset-0 border-t-2 transition-colors duration-75 ${
           over ? 'border-blue-500' : 'border-transparent'
         } pointer-events-none`}
       />
     </li>
   );
 }
+
+
 
 interface NodeProps {
   node: MemoTreeItem;
