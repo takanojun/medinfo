@@ -83,10 +83,10 @@ export default function MemoList({
     return roots;
   };
 
-  const isDescendantOf = (id: number | null, ancestor: number): boolean => {
+  const isAncestorOrSelf = (id: number | null, potentialAncestor: number): boolean => {
     let current = memos.find((m) => m.id === id);
     while (current) {
-      if (current.parent_id === ancestor) return true;
+      if (current.id === potentialAncestor) return true;
       current =
         current.parent_id != null
           ? memos.find((m) => m.id === current!.parent_id)
@@ -95,13 +95,36 @@ export default function MemoList({
     return false;
   };
 
-  const handleDrop = (dragId: number, targetId: number | null) => {
-    if (dragId === targetId) return;
-    if (targetId !== null && isDescendantOf(targetId, dragId)) return;
-    const newMemos = memos.map((m) =>
-      m.id === dragId ? { ...m, parent_id: targetId } : m
-    );
-    onReorder(newMemos);
+  const handleDropAsChild = (dragId: number, parentId: number | null) => {
+    if (dragId === parentId) return;
+    if (parentId !== null && isAncestorOrSelf(parentId, dragId)) return;
+    const list = [...memos];
+    const dragIndex = list.findIndex((m) => m.id === dragId);
+    if (dragIndex === -1) return;
+    const [item] = list.splice(dragIndex, 1);
+    list.push({ ...item, parent_id: parentId });
+    onReorder(list);
+  };
+
+  const handleDropAt = (
+    dragId: number,
+    beforeId: number | null,
+    parentId: number | null,
+  ) => {
+    if (dragId === beforeId) return;
+    if (parentId !== null && isAncestorOrSelf(parentId, dragId)) return;
+    if (beforeId !== null && isAncestorOrSelf(beforeId, dragId)) return;
+    const list = [...memos];
+    const dragIndex = list.findIndex((m) => m.id === dragId);
+    if (dragIndex === -1) return;
+    const [item] = list.splice(dragIndex, 1);
+    item.parent_id = parentId;
+    let insertIndex =
+      beforeId === null ? list.length : list.findIndex((m) => m.id === beforeId);
+    if (insertIndex === -1) insertIndex = list.length;
+    if (dragIndex < insertIndex) insertIndex--;
+    list.splice(insertIndex, 0, item);
+    onReorder(list);
   };
   return (
     <div className={`flex flex-col h-full p-2 space-y-2 ${className}`}>
@@ -141,25 +164,70 @@ export default function MemoList({
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           const dragId = Number(e.dataTransfer.getData('text/plain'));
-          handleDrop(dragId, null);
+          handleDropAt(dragId, null, null);
         }}
       >
         <ul className="space-y-1">
-          {tree().map((node) => (
-            <MemoNode
-              key={node.id}
-              node={node}
-              depth={0}
-              selectedId={selectedId}
-              onSelect={onSelect}
-              onDrop={handleDrop}
-              expanded={expanded}
-              toggle={toggle}
-            />
+          <DropZone
+            onDrop={(id) => handleDropAt(id, tree()[0]?.id ?? null, null)}
+          />
+          {tree().map((node, idx) => (
+            <React.Fragment key={node.id}>
+              <MemoNode
+                node={node}
+                depth={0}
+                selectedId={selectedId}
+                onSelect={onSelect}
+                onDropAsChild={handleDropAsChild}
+                onDropAt={handleDropAt}
+                expanded={expanded}
+                toggle={toggle}
+              />
+              <DropZone
+                onDrop={(id) =>
+                  handleDropAt(
+                    id,
+                    tree()[idx + 1]?.id ?? null,
+                    null,
+                  )
+                }
+              />
+            </React.Fragment>
           ))}
         </ul>
       </div>
     </div>
+  );
+}
+
+interface DropZoneProps {
+  onDrop: (dragId: number) => void;
+}
+
+function DropZone({ onDrop }: DropZoneProps) {
+  const [over, setOver] = useState(false);
+  return (
+    <li
+      className="relative h-2 my-1"
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (!over) setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        const dragId = Number(e.dataTransfer.getData('text/plain'));
+        onDrop(dragId);
+        setOver(false);
+        e.stopPropagation();
+        e.preventDefault();
+      }}
+    >
+      <div
+        className={`absolute inset-0 border-t-2 ${
+          over ? 'border-blue-500' : 'border-transparent'
+        } pointer-events-none`}
+      />
+    </li>
   );
 }
 
@@ -168,18 +236,28 @@ interface NodeProps {
   depth: number;
   selectedId: number | null;
   onSelect: (id: number) => void;
-  onDrop: (dragId: number, targetId: number | null) => void;
+  onDropAsChild: (dragId: number, parentId: number | null) => void;
+  onDropAt: (dragId: number, beforeId: number | null, parentId: number | null) => void;
   expanded: Set<number>;
   toggle: (id: number) => void;
 }
 
-function MemoNode({ node, depth, selectedId, onSelect, onDrop, expanded, toggle }: NodeProps) {
+function MemoNode({
+  node,
+  depth,
+  selectedId,
+  onSelect,
+  onDropAsChild,
+  onDropAt,
+  expanded,
+  toggle,
+}: NodeProps) {
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('text/plain', String(node.id));
   };
   const handleDropNode = (e: React.DragEvent) => {
     const dragId = Number(e.dataTransfer.getData('text/plain'));
-    onDrop(dragId, node.id);
+    onDropAsChild(dragId, node.id);
     e.stopPropagation();
     e.preventDefault();
   };
@@ -218,17 +296,33 @@ function MemoNode({ node, depth, selectedId, onSelect, onDrop, expanded, toggle 
       </div>
       {expandedHere && node.children.length > 0 && (
         <ul className="mt-1">
-          {node.children.map((child) => (
-            <MemoNode
-              key={child.id}
-              node={child}
-              depth={depth + 1}
-              selectedId={selectedId}
-              onSelect={onSelect}
-              onDrop={onDrop}
-              expanded={expanded}
-              toggle={toggle}
-            />
+          <DropZone
+            onDrop={(id) =>
+              onDropAt(id, node.children[0]?.id ?? null, node.id)
+            }
+          />
+          {node.children.map((child, idx) => (
+            <React.Fragment key={child.id}>
+              <MemoNode
+                node={child}
+                depth={depth + 1}
+                selectedId={selectedId}
+                onSelect={onSelect}
+                onDropAsChild={onDropAsChild}
+                onDropAt={onDropAt}
+                expanded={expanded}
+                toggle={toggle}
+              />
+              <DropZone
+                onDrop={(id) =>
+                  onDropAt(
+                    id,
+                    node.children[idx + 1]?.id ?? null,
+                    node.id,
+                  )
+                }
+              />
+            </React.Fragment>
           ))}
         </ul>
       )}
