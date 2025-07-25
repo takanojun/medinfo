@@ -163,7 +163,7 @@ export default function MemoApp({ facilityId, facilityName, initialSelectedId }:
   });
 
   const visibleIds = new Set(filtered.map((m) => m.id));
-  memos.forEach((m) => {
+  filtered.forEach((m) => {
     let p = m.parent_id;
     while (p) {
       if (visibleIds.has(p)) break;
