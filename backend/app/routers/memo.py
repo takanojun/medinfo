@@ -53,6 +53,7 @@ def create_memo(
     next_order = (max_order[0] + 1) if max_order else 1
     db_memo = models.FacilityMemo(
         facility_id=facility_id,
+        parent_id=memo.parent_id,
         title=memo.title,
         content=memo.content,
         sort_order=next_order,
@@ -95,6 +96,7 @@ def create_general_memo(
     next_order = (max_order[0] + 1) if max_order else 1
     db_memo = models.FacilityMemo(
         facility_id=None,
+        parent_id=memo.parent_id,
         title=memo.title,
         content=memo.content,
         sort_order=next_order,
@@ -166,6 +168,8 @@ def update_memo(
         db_memo.sort_order = update.sort_order
     if update.facility_id is not None:
         db_memo.facility_id = update.facility_id
+    if update.parent_id is not None:
+        db_memo.parent_id = update.parent_id
     if update.tag_ids is not None:
         db.query(models.FacilityMemoTagLink).filter(
             models.FacilityMemoTagLink.memo_id == memo_id
@@ -369,7 +373,7 @@ def unlock_memo(memo_id: int, user: str, db: Session = Depends(get_db)):
 def reorder_memos(update: schemas.MemoOrderUpdate, db: Session = Depends(get_db)):
     for item in update.orders:
         db.query(models.FacilityMemo).filter(models.FacilityMemo.id == item.id).update(
-            {"sort_order": item.sort_order}
+            {"sort_order": item.sort_order, "parent_id": item.parent_id}
         )
     db.commit()
     return {"message": "ok"}

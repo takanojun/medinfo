@@ -9,12 +9,14 @@ import ImageModal from '../components/ImageModal';
 interface Props {
   memo: MemoItem | null;
   tagOptions: MemoTag[];
+  childMemos?: MemoItem[];
   onEdit: () => void;
   onToggleDelete: () => void;
   onShowHistory: () => void;
+  onSelectMemo?: (id: number) => void;
 }
 
-export default function MemoViewer({ memo, tagOptions, onEdit, onToggleDelete, onShowHistory }: Props) {
+export default function MemoViewer({ memo, tagOptions, childMemos = [], onEdit, onToggleDelete, onShowHistory, onSelectMemo }: Props) {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [imageAlt, setImageAlt] = useState<string>('');
   if (!memo) return <div className="flex-1 p-4">メモを選択してください</div>;
@@ -113,6 +115,22 @@ export default function MemoViewer({ memo, tagOptions, onEdit, onToggleDelete, o
           />
         )}
       </div>
+      {childMemos.length > 0 && (
+        <div className="mt-4">
+          <h2 className="text-lg font-bold">目次</h2>
+          <ul className="list-disc ml-5">
+            {childMemos.map((c) => (
+              <li
+                key={c.id}
+                className="text-blue-600 cursor-pointer"
+                onClick={() => onSelectMemo && onSelectMemo(c.id)}
+              >
+                {c.title}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {tagObjs.length > 0 && (
         <div className="mt-2 text-sm flex flex-wrap gap-1">
           {tagObjs.map((t) => (

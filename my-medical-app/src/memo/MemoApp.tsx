@@ -8,6 +8,7 @@ import MemoHistoryModal from './MemoHistoryModal';
 
 export interface MemoItem {
   id: number;
+  parent_id: number | null;
   title: string;
   content: string;
   tag_ids: number[];
@@ -26,6 +27,7 @@ export interface MemoTag {
 interface FacilityMemoResponse {
   id: number;
   facility_id: number;
+  parent_id: number | null;
   title: string;
   content: string | null;
   is_deleted: boolean;
@@ -85,7 +87,11 @@ export default function MemoApp({ facilityId, facilityName, initialSelectedId }:
 
   const reorderMemos = (newMemos: MemoItem[]) => {
     setMemos(newMemos);
-    const orders = newMemos.map((m, i) => ({ id: m.id, sort_order: i + 1 }));
+    const orders = newMemos.map((m, i) => ({
+      id: m.id,
+      sort_order: i + 1,
+      parent_id: m.parent_id,
+    }));
     fetch(`${apiBase}/memos/reorder`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -93,14 +99,6 @@ export default function MemoApp({ facilityId, facilityName, initialSelectedId }:
     }).then(fetchMemos);
   };
 
-  const handleMove = (id: number, dir: -1 | 1) => {
-    const idx = memos.findIndex((m) => m.id === id);
-    if (idx === -1) return;
-    const newMemos = [...memos];
-    const [item] = newMemos.splice(idx, 1);
-    newMemos.splice(idx + dir, 0, item);
-    reorderMemos(newMemos);
-  };
 
   const fetchTags = useCallback(() => {
     fetch(`${apiBase}/memo-tags`)
@@ -134,6 +132,7 @@ export default function MemoApp({ facilityId, facilityName, initialSelectedId }:
       .then((data: FacilityMemoResponse[]) => {
         const list: MemoItem[] = data.map((m) => ({
           id: m.id,
+          parent_id: m.parent_id,
           title: m.title,
           content: m.content || '',
           tag_ids: (m.tags || []).map((t) => t.id),
@@ -163,10 +162,34 @@ export default function MemoApp({ facilityId, facilityName, initialSelectedId }:
     return true;
   });
 
+  const visibleIds = new Set(filtered.map((m) => m.id));
+  memos.forEach((m) => {
+    let p = m.parent_id;
+    while (p) {
+      if (visibleIds.has(p)) break;
+      const parent = memos.find((x) => x.id === p);
+      if (parent) {
+        visibleIds.add(parent.id);
+        p = parent.parent_id;
+      } else {
+        break;
+      }
+    }
+  });
+  const finalList = memos.filter((m) => visibleIds.has(m.id));
+
   const selected = memos.find((m) => m.id === selectedId) || null;
+  const childMemos = selected ? memos.filter((m) => m.parent_id === selected.id) : [];
 
   const handleCreate = () => {
-    const memo: MemoItem = { id: 0, title: '', content: '', tag_ids: [], sort_order: memos.length + 1 };
+    const memo: MemoItem = {
+      id: 0,
+      parent_id: selectedId,
+      title: '',
+      content: '',
+      tag_ids: [],
+      sort_order: memos.length + 1,
+    };
     setEditing(memo);
     setEditingReadOnly(false);
     setEditingMessage(null);
@@ -204,6 +227,8 @@ export default function MemoApp({ facilityId, facilityName, initialSelectedId }:
         title: memo.title,
         content: memo.content,
         tag_ids: memo.tag_ids,
+        parent_id: memo.parent_id,
+        sort_order: memo.sort_order,
       }),
     })
       .then((res) => res.json())
@@ -255,24 +280,26 @@ export default function MemoApp({ facilityId, facilityName, initialSelectedId }:
         initialLeftWidth={300}
         left={
           <MemoList
-            memos={filtered}
+            memos={finalList}
             selectedId={selectedId}
             onSelect={setSelectedId}
             showDeleted={showDeleted}
             onToggleDeleted={() => setShowDeleted((v) => !v)}
             search={search}
             onSearch={setSearch}
-            tagOptions={tagMaster}
+          tagOptions={tagMaster}
           tagFilter={tagFilter}
           onTagFilterChange={setTagFilter}
           onCreate={handleCreate}
-          onMove={handleMove}
+          onReorder={reorderMemos}
         />
         }
         right={
           <MemoViewer
             memo={selected}
             tagOptions={tagMaster}
+            childMemos={childMemos}
+            onSelectMemo={setSelectedId}
             onEdit={() => selected && handleEdit(selected)}
             onToggleDelete={() => selected && handleToggleDelete(selected.id)}
             onShowHistory={() => setIsHistoryOpen(true)}

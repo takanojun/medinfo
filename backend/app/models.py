@@ -12,7 +12,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import BYTEA, UUID as PG_UUID
 import uuid
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from .database import Base
 
 
@@ -110,6 +110,7 @@ class FacilityMemo(Base):
 
     id = Column(Integer, primary_key=True)
     facility_id = Column(Integer, ForeignKey("medical_facility.id"), nullable=True)
+    parent_id = Column(Integer, ForeignKey("facility_memos.id"), nullable=True)
     title = Column(Text, nullable=False)
     content = Column(Text)
     is_deleted = Column(Boolean, default=False)
@@ -132,6 +133,11 @@ class FacilityMemo(Base):
         "FacilityMemoLock",
         uselist=False,
         back_populates="memo",
+        cascade="all, delete-orphan",
+    )
+    children = relationship(
+        "FacilityMemo",
+        backref=backref("parent", remote_side=[id]),
         cascade="all, delete-orphan",
     )
 
