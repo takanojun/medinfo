@@ -95,14 +95,83 @@ export default function MemoList({
     return false;
   };
 
+  const buildTreeFromList = (list: MemoItem[]): MemoTreeItem[] => {
+    const map = new Map<number, MemoTreeItem>();
+    list.forEach((m) => map.set(m.id, { ...m, children: [] }));
+    const roots: MemoTreeItem[] = [];
+    map.forEach((m) => {
+      if (m.parent_id && map.has(m.parent_id)) {
+        map.get(m.parent_id)!.children.push(m);
+      } else {
+        roots.push(m);
+      }
+    });
+    const sort = (items: MemoTreeItem[]) => {
+      items.sort((a, b) => a.sort_order - b.sort_order);
+      items.forEach((it) => sort(it.children));
+    };
+    sort(roots);
+    return roots;
+  };
+
+  const flattenTree = (nodes: MemoTreeItem[], out: MemoItem[] = []): MemoItem[] => {
+    nodes.forEach((n) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { children, ...rest } = n;
+      out.push(rest);
+      flattenTree(n.children, out);
+    });
+    return out;
+  };
+
+  const findNode = (
+    nodes: MemoTreeItem[],
+    id: number,
+    parent: MemoTreeItem | null = null,
+  ): { node: MemoTreeItem; parent: MemoTreeItem | null } | null => {
+    for (const n of nodes) {
+      if (n.id === id) return { node: n, parent };
+      const res = findNode(n.children, id, n);
+      if (res) return res;
+    }
+    return null;
+  };
+
+  const moveSubtree = (
+    list: MemoItem[],
+    dragId: number,
+    beforeId: number | null,
+    parentId: number | null,
+  ) => {
+    const roots = buildTreeFromList(list);
+    const dragInfo = findNode(roots, dragId);
+    if (!dragInfo) return list;
+    const from = dragInfo.parent ? dragInfo.parent.children : roots;
+    const dragIndex = from.findIndex((n) => n.id === dragId);
+    if (dragIndex === -1) return list;
+    const [dragNode] = from.splice(dragIndex, 1);
+    dragNode.parent_id = parentId;
+
+    const targetParent =
+      parentId === null ? null : findNode(roots, parentId)?.node || null;
+    const to = targetParent ? targetParent.children : roots;
+
+    let insertIndex = to.length;
+    if (beforeId !== null) {
+      const idx = to.findIndex((n) => n.id === beforeId);
+      if (idx !== -1) insertIndex = idx;
+    }
+    to.splice(insertIndex, 0, dragNode);
+
+    const flattened = flattenTree(roots);
+    flattened.forEach((m, i) => (m.sort_order = i + 1));
+    return flattened;
+  };
+
   const handleDropAsChild = (dragId: number, parentId: number | null) => {
     if (dragId === parentId) return;
     if (parentId !== null && isAncestorOrSelf(parentId, dragId)) return;
-    const list = [...memos];
-    const dragIndex = list.findIndex((m) => m.id === dragId);
-    if (dragIndex === -1) return;
-    const [item] = list.splice(dragIndex, 1);
-    list.push({ ...item, parent_id: parentId });
+    const list = moveSubtree([...memos], dragId, null, parentId);
     onReorder(list);
   };
 
@@ -113,17 +182,9 @@ export default function MemoList({
   ) => {
     if (dragId === beforeId) return;
     if (parentId !== null && isAncestorOrSelf(parentId, dragId)) return;
-    if (beforeId !== null && isAncestorOrSelf(beforeId, dragId)) return;
-    const list = [...memos];
-    const dragIndex = list.findIndex((m) => m.id === dragId);
-    if (dragIndex === -1) return;
-    const [item] = list.splice(dragIndex, 1);
-    item.parent_id = parentId;
-    let insertIndex =
-      beforeId === null ? list.length : list.findIndex((m) => m.id === beforeId);
-    if (insertIndex === -1) insertIndex = list.length;
-    if (dragIndex < insertIndex) insertIndex--;
-    list.splice(insertIndex, 0, item);
+    // prevent dropping a node before one of its own descendants
+    if (beforeId !== null && isAncestorOrSelf(dragId, beforeId)) return;
+    const list = moveSubtree([...memos], dragId, beforeId, parentId);
     onReorder(list);
   };
   return (
@@ -254,6 +315,7 @@ function MemoNode({
 }: NodeProps) {
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('text/plain', String(node.id));
+    e.stopPropagation();
   };
   const handleDropNode = (e: React.DragEvent) => {
     const dragId = Number(e.dataTransfer.getData('text/plain'));
