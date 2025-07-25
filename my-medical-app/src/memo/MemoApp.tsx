@@ -5,6 +5,7 @@ import MemoEditor from './MemoEditor';
 import VerticalSplit from '../components/VerticalSplit';
 import MemoTagManagerModal from './MemoTagManagerModal';
 import MemoHistoryModal from './MemoHistoryModal';
+import TemplateSelectModal from './TemplateSelectModal';
 
 export interface MemoItem {
   id: number;
@@ -78,6 +79,7 @@ export default function MemoApp({ facilityId, facilityName, initialSelectedId }:
   const [search, setSearch] = useState('');
   const [tagFilter, setTagFilter] = useState<number[]>([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isTemplateOpen, setIsTemplateOpen] = useState(false);
 
   useEffect(() => {
     if (initialSelectedId) {
@@ -318,6 +320,7 @@ export default function MemoApp({ facilityId, facilityName, initialSelectedId }:
             setEditingMessage(null);
           }}
           onOpenTagMaster={() => setIsTagMasterOpen(true)}
+          onOpenTemplateSelect={() => setIsTemplateOpen(true)}
           readOnly={editingReadOnly}
           message={editingMessage || undefined}
         />
@@ -329,6 +332,17 @@ export default function MemoApp({ facilityId, facilityName, initialSelectedId }:
           fetchTags();
         }}
       />
+      {editing && (
+        <TemplateSelectModal
+          isOpen={isTemplateOpen}
+          tagOptions={tagMaster}
+          onClose={() => setIsTemplateOpen(false)}
+          onSelect={(tpl) => {
+            setEditing((prev) => prev && { ...prev, title: tpl.title, content: tpl.content, tag_ids: tpl.tag_ids });
+            setIsTemplateOpen(false);
+          }}
+        />
+      )}
       {selected && (
         <MemoHistoryModal
           memoId={selected.id}

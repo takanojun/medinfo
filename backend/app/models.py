@@ -103,6 +103,11 @@ class MemoTag(Base):
         secondary="facility_memo_tag_links",
         back_populates="tags",
     )
+    templates = relationship(
+        "MemoTemplate",
+        secondary="memo_template_tag_links",
+        back_populates="tags",
+    )
 
 
 class FacilityMemo(Base):
@@ -190,3 +195,70 @@ class NoteImage(Base):
     created_at = Column(TIMESTAMP, server_default="now()")
 
     memo = relationship("FacilityMemo", backref="images")
+
+
+# テンプレートテーブル
+class MemoTemplate(Base):
+    __tablename__ = "memo_templates"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(Text, nullable=False)
+    title = Column(Text, nullable=False)
+    content = Column(Text)
+    is_deleted = Column(Boolean, default=False)
+    updated_at = Column(TIMESTAMP, server_default="now()")
+    sort_order = Column(Integer, default=0)
+
+    tags = relationship(
+        "MemoTag",
+        secondary="memo_template_tag_links",
+        back_populates="templates",
+    )
+    versions = relationship(
+        "MemoTemplateVersion",
+        back_populates="template",
+        cascade="all, delete-orphan",
+        order_by="MemoTemplateVersion.version_no",
+    )
+    lock = relationship(
+        "MemoTemplateLock",
+        uselist=False,
+        back_populates="template",
+        cascade="all, delete-orphan",
+    )
+
+
+class MemoTemplateVersion(Base):
+    __tablename__ = "memo_template_versions"
+
+    id = Column(Integer, primary_key=True)
+    template_id = Column(Integer, ForeignKey("memo_templates.id", ondelete="CASCADE"))
+    version_no = Column(Integer, nullable=False)
+    content = Column(Text)
+    created_at = Column(TIMESTAMP, server_default="now()")
+    ip_address = Column(Text)
+    action = Column(Text)
+
+    template = relationship("MemoTemplate", back_populates="versions")
+
+
+class MemoTemplateTagLink(Base):
+    __tablename__ = "memo_template_tag_links"
+
+    template_id = Column(
+        Integer, ForeignKey("memo_templates.id", ondelete="CASCADE"), primary_key=True
+    )
+    tag_id = Column(Integer, ForeignKey("memo_tags.id"), primary_key=True)
+
+
+class MemoTemplateLock(Base):
+    __tablename__ = "memo_template_locks"
+
+    template_id = Column(
+        Integer, ForeignKey("memo_templates.id", ondelete="CASCADE"), primary_key=True
+    )
+    locked_by = Column(Text)
+    locked_at = Column(TIMESTAMP, server_default="now()")
+    ip_address = Column(Text)
+
+    template = relationship("MemoTemplate", back_populates="lock")

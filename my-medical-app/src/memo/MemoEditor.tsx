@@ -16,11 +16,12 @@ interface Props {
   onSave: (m: MemoItem) => void;
   onCancel: () => void;
   onOpenTagMaster: () => void;
+  onOpenTemplateSelect: () => void;
   readOnly?: boolean;
   message?: string;
 }
 
-export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenTagMaster, readOnly = false, message }: Props) {
+export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenTagMaster, onOpenTemplateSelect, readOnly = false, message }: Props) {
   const [title, setTitle] = useState(memo.title);
   const [content, setContent] = useState(memo.content);
   const [tags, setTags] = useState<number[]>(memo.tag_ids);
@@ -308,13 +309,22 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
             />
             <div className="border p-1 mt-2 space-y-1 relative pr-20">
               {!readOnly && (
-                <button
-                  type="button"
-                  className="absolute top-1 right-1 bg-blue-500 text-white text-xs px-2 py-1 rounded"
-                  onClick={onOpenTagMaster}
-                >
-                  タグ管理
-                </button>
+                <div className="absolute top-1 right-1 flex gap-1">
+                  <button
+                    type="button"
+                    className="bg-blue-500 text-white text-xs px-2 py-1 rounded"
+                    onClick={onOpenTemplateSelect}
+                  >
+                    テンプレ
+                  </button>
+                  <button
+                    type="button"
+                    className="bg-blue-500 text-white text-xs px-2 py-1 rounded"
+                    onClick={onOpenTagMaster}
+                  >
+                    タグ管理
+                  </button>
+                </div>
               )}
               <TagSearchInput
                 options={options}
