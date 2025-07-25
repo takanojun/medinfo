@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { MemoItem } from './MemoApp';
 
 type MemoTreeItem = MemoItem & { children: MemoTreeItem[] };
@@ -43,6 +43,17 @@ export default function MemoList({
     label: t.name,
     color: t.color,
   }));
+
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+
+  const toggle = (id: number) => {
+    setExpanded((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  };
 
   const tree = (): MemoTreeItem[] => {
     const map = new Map<number, MemoTreeItem>();
@@ -119,6 +130,8 @@ export default function MemoList({
               selectedId={selectedId}
               onSelect={onSelect}
               onDrop={handleDrop}
+              expanded={expanded}
+              toggle={toggle}
             />
           ))}
         </ul>
@@ -133,9 +146,11 @@ interface NodeProps {
   selectedId: number | null;
   onSelect: (id: number) => void;
   onDrop: (dragId: number, targetId: number | null) => void;
+  expanded: Set<number>;
+  toggle: (id: number) => void;
 }
 
-function MemoNode({ node, depth, selectedId, onSelect, onDrop }: NodeProps) {
+function MemoNode({ node, depth, selectedId, onSelect, onDrop, expanded, toggle }: NodeProps) {
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('text/plain', String(node.id));
   };
@@ -148,20 +163,35 @@ function MemoNode({ node, depth, selectedId, onSelect, onDrop }: NodeProps) {
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
   };
+  const expandedHere = expanded.has(node.id);
   return (
     <li
-      className={`p-2 border rounded cursor-pointer ml-${depth * 4} ${
+      className={`px-2 py-1 cursor-pointer select-none ${
         selectedId === node.id ? 'bg-blue-100' : ''
       }`}
+      style={{ paddingLeft: depth * 16 }}
       draggable
       onDragStart={handleDragStart}
       onDrop={handleDropNode}
       onDragOver={handleDragOver}
       onClick={() => onSelect(node.id)}
     >
-      <span className="mr-2">{node.title}</span>
-      {node.children.length > 0 && (
-        <ul className="mt-1 space-y-1">
+      <div className="flex items-center">
+        {node.children.length > 0 && (
+          <span
+            className="mr-1 cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggle(node.id);
+            }}
+          >
+            {expandedHere ? '▼' : '▶'}
+          </span>
+        )}
+        <span>{node.title}</span>
+      </div>
+      {expandedHere && node.children.length > 0 && (
+        <ul className="mt-1">
           {node.children.map((child) => (
             <MemoNode
               key={child.id}
@@ -170,6 +200,8 @@ function MemoNode({ node, depth, selectedId, onSelect, onDrop }: NodeProps) {
               selectedId={selectedId}
               onSelect={onSelect}
               onDrop={onDrop}
+              expanded={expanded}
+              toggle={toggle}
             />
           ))}
         </ul>
