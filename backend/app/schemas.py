@@ -280,3 +280,77 @@ class NoteImageCreate(BaseModel):
     file_name: str
     mime_type: str
 
+
+class MemoTemplateBase(BaseModel):
+    id: int
+    name: str
+    title: str
+    content: Optional[str]
+    is_deleted: bool
+    updated_at: Optional[datetime]
+    sort_order: int
+    tags: List[MemoTagBase] = []
+
+    class Config:
+        from_attributes = True
+
+
+class MemoTemplateCreate(BaseModel):
+    name: str
+    title: str
+    content: Optional[str] = None
+    tag_ids: Optional[List[int]] = None
+    sort_order: Optional[int] = None
+
+    @validator("name")
+    def validate_name(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("テンプレート名が未入力のため登録できません")
+        return v
+
+    @validator("title")
+    def validate_title(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("タイトルが未入力のため登録できません")
+        return v
+
+
+class MemoTemplateUpdate(BaseModel):
+    name: Optional[str] = None
+    title: Optional[str] = None
+    content: Optional[str] = None
+    tag_ids: Optional[List[int]] = None
+    sort_order: Optional[int] = None
+
+
+class MemoTemplateVersionBase(BaseModel):
+    id: int
+    template_id: int
+    version_no: int
+    content: Optional[str]
+    created_at: Optional[datetime]
+    ip_address: Optional[str]
+    action: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
+class MemoTemplateLockBase(BaseModel):
+    template_id: int
+    locked_by: Optional[str]
+    locked_at: Optional[datetime]
+    ip_address: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
+class MemoTemplateOrderItem(BaseModel):
+    id: int
+    sort_order: int
+
+
+class MemoTemplateOrderUpdate(BaseModel):
+    orders: List[MemoTemplateOrderItem]
+

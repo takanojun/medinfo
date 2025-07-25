@@ -51,15 +51,18 @@ CREATE TABLE memo_tags (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     remark TEXT,
+    color TEXT,
     is_deleted BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE facility_memos (
     id SERIAL PRIMARY KEY,
     facility_id INTEGER REFERENCES medical_facility(id),
+    parent_id INTEGER REFERENCES facility_memos(id),
     title TEXT NOT NULL,
     content TEXT,
     is_deleted BOOLEAN DEFAULT FALSE,
+    sort_order INTEGER DEFAULT 0,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -94,4 +97,40 @@ CREATE TABLE note_images (
     mime_type TEXT NOT NULL,
     data BYTEA NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Template feature tables
+
+CREATE TABLE memo_templates (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT,
+    is_deleted BOOLEAN DEFAULT FALSE,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    sort_order INTEGER DEFAULT 0
+);
+
+CREATE TABLE memo_template_versions (
+    id SERIAL PRIMARY KEY,
+    template_id INTEGER REFERENCES memo_templates(id) ON DELETE CASCADE,
+    version_no INTEGER NOT NULL,
+    content TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    ip_address TEXT,
+    action TEXT,
+    UNIQUE (template_id, version_no)
+);
+
+CREATE TABLE memo_template_tag_links (
+    template_id INTEGER REFERENCES memo_templates(id) ON DELETE CASCADE,
+    tag_id INTEGER REFERENCES memo_tags(id),
+    PRIMARY KEY (template_id, tag_id)
+);
+
+CREATE TABLE memo_template_locks (
+    template_id INTEGER PRIMARY KEY REFERENCES memo_templates(id) ON DELETE CASCADE,
+    locked_by TEXT,
+    locked_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    ip_address TEXT
 );

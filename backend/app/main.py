@@ -6,6 +6,7 @@ from .routers import (
     facility_function_entry,
     function_category,
     memo,
+    memo_template,
     memo_tag,
     note_image,
 )
@@ -31,5 +32,6 @@ app.include_router(function.router)
 app.include_router(facility_function_entry.router)
 app.include_router(function_category.router)
 app.include_router(memo.router)
+app.include_router(memo_template.router)
 app.include_router(memo_tag.router)
 app.include_router(note_image.router)
