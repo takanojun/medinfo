@@ -25,12 +25,14 @@ export default function TagSearchInput({
 }: Props) {
   const [input, setInput] = useState('');
   const [open, setOpen] = useState(false);
+  const openRef = useRef(open);
   const containerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
+  const query = input.trim().toLowerCase();
   const filtered = options.filter(
-    (o) =>
-      o.label.toLowerCase().includes(input.toLowerCase()) &&
-      !selected.includes(o.value),
+    (o) => o.label.toLowerCase().includes(query) && !selected.includes(o.value),
   );
 
   const selectedOptions = selected
@@ -58,13 +60,30 @@ export default function TagSearchInput({
   };
 
   useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+
+  useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const container = containerRef.current;
+      const list = listRef.current;
+      const inputEl = inputRef.current;
+      if (!container) return;
+      if (!container.contains(e.target as Node)) {
+        setOpen(false);
+        return;
+      }
+      if (
+        openRef.current &&
+        list &&
+        !list.contains(e.target as Node) &&
+        (!inputEl || !inputEl.contains(e.target as Node))
+      ) {
         setOpen(false);
       }
     };
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
+    document.addEventListener('mousedown', handleClick, true);
+    return () => document.removeEventListener('mousedown', handleClick, true);
   }, []);
 
   const getContrast = (hex?: string) => {
@@ -83,7 +102,9 @@ export default function TagSearchInput({
         className={`flex flex-wrap gap-1 border rounded px-1 py-1 ${
           disabled ? 'bg-gray-100 cursor-not-allowed' : ''
         }`}
-        onClick={() => !disabled && setOpen(true)}
+        onMouseDown={() => {
+          if (!disabled) inputRef.current?.focus();
+        }}
       >
         {selectedOptions.map((opt) => (
           <span
@@ -109,12 +130,14 @@ export default function TagSearchInput({
           </span>
         ))}
         <input
+          ref={inputRef}
           type="text"
           value={input}
           onChange={(e) => {
             setInput(e.target.value);
             setOpen(true);
           }}
+          onFocus={() => !disabled && setOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={selectedOptions.length ? '' : placeholder}
           className="flex-1 min-w-16 outline-none"
@@ -122,7 +145,10 @@ export default function TagSearchInput({
         />
       </div>
       {open && filtered.length > 0 && !disabled && (
-        <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded bg-white border shadow">
+        <ul
+          ref={listRef}
+          className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded bg-white border shadow"
+        >
           {filtered.map((opt) => (
             <li
               key={opt.value}
