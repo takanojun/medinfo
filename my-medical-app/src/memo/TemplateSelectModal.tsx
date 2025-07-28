@@ -4,7 +4,7 @@ import ImeInput from '../components/ImeInput';
 import TagSearchInput from '../components/TagSearchInput';
 import type { Option } from '../components/TagSearchInput';
 import type { MemoTag } from './MemoApp';
-import TemplateEditModal, { TemplateData } from './TemplateEditModal';
+import TemplateEditModal, { type TemplateData } from './TemplateEditModal';
 
 interface Template {
   id: number;

@@ -9,7 +9,7 @@ import ImeTextarea from '../components/ImeTextarea';
 import TagSearchInput from '../components/TagSearchInput';
 import type { Option } from '../components/TagSearchInput';
 import type { MemoItem, MemoTag } from './MemoApp';
-import TemplateEditModal, { TemplateData } from './TemplateEditModal';
+import TemplateEditModal, { type TemplateData } from './TemplateEditModal';
 
 interface Props {
   memo: MemoItem;
