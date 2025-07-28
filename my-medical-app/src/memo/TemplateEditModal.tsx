@@ -31,7 +31,7 @@ export default function TemplateEditModal({
   onSave,
   onClose,
 }: Props) {
-  const [name, setName] = useState(template.name);
+  const [name, setName] = useState(template.id ? template.name : '');
   const [title, setTitle] = useState(template.title);
   const [content, setContent] = useState(template.content || '');
   const [tags, setTags] = useState<number[]>(template.tag_ids);
@@ -41,10 +41,11 @@ export default function TemplateEditModal({
   const handleSubmit = () => {
     const method = template.id ? 'PUT' : 'POST';
     const url = template.id ? `${apiBase}/memo-templates/${template.id}` : `${apiBase}/memo-templates`;
+    const nameToSend = name.trim() ? name : title;
     fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, title, content, tag_ids: tags }),
+      body: JSON.stringify({ name: nameToSend, title, content, tag_ids: tags }),
     })
       .then((res) => res.json())
       .then((data: TemplateData) => {

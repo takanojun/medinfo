@@ -208,7 +208,7 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
                   onClick={() =>
                     setTemplateEdit({
                       id: 0,
-                      name: title,
+                      name: '',
                       title,
                       content,
                       tag_ids: tags,
