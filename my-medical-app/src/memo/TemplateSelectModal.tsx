@@ -4,6 +4,7 @@ import ImeInput from '../components/ImeInput';
 import TagSearchInput from '../components/TagSearchInput';
 import type { Option } from '../components/TagSearchInput';
 import type { MemoTag } from './MemoApp';
+import TemplateEditModal, { TemplateData } from './TemplateEditModal';
 
 interface Template {
   id: number;
@@ -29,11 +30,11 @@ export default function TemplateSelectModal({ isOpen, tagOptions, onSelect, onCl
   const [search, setSearch] = useState('');
   const [tagFilter, setTagFilter] = useState<number[]>([]);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [editing, setEditing] = useState<TemplateData | null>(null);
 
   const options: Option[] = tagOptions.map((t) => ({ value: t.id, label: t.name, color: t.color }));
 
-  useEffect(() => {
-    if (!isOpen) return;
+  const loadTemplates = () => {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     tagFilter.forEach((t) => params.append('tag', String(t)));
@@ -43,6 +44,11 @@ export default function TemplateSelectModal({ isOpen, tagOptions, onSelect, onCl
         data.sort((a, b) => a.sort_order - b.sort_order);
         setTemplates(data);
       });
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    loadTemplates();
   }, [isOpen, search, tagFilter]);
 
   const reorder = (list: Template[]) => {
@@ -64,7 +70,13 @@ export default function TemplateSelectModal({ isOpen, tagOptions, onSelect, onCl
     setDragIndex(null);
   };
 
+  const handleDelete = (tpl: Template) => {
+    if (!confirm('削除しますか？')) return;
+    fetch(`${apiBase}/memo-templates/${tpl.id}`, { method: 'DELETE' }).then(loadTemplates);
+  };
+
   return (
+    <>
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-[70]" onClose={onClose}>
         <div className="fixed inset-0 bg-black bg-opacity-25" />
@@ -89,9 +101,20 @@ export default function TemplateSelectModal({ isOpen, tagOptions, onSelect, onCl
                     <div className="font-bold">{t.name}</div>
                     <div className="text-sm text-gray-600">{new Date(t.updated_at).toLocaleString()}</div>
                   </div>
-                  <button className="px-2 py-1 bg-blue-500 text-white text-sm rounded" onClick={() => onSelect(t)}>
-                    選択
-                  </button>
+                  <div className="space-x-1">
+                    <button className="px-2 py-1 bg-blue-500 text-white text-sm rounded" onClick={() => onSelect(t)}>
+                      選択
+                    </button>
+                    <button className="px-2 py-1 bg-green-500 text-white text-sm rounded" onClick={() => setEditing(t)}>
+                      編集
+                    </button>
+                    <button className="px-2 py-1 bg-gray-500 text-white text-sm rounded" onClick={() => setEditing({ ...t, id: 0 })}>
+                      複製
+                    </button>
+                    <button className="px-2 py-1 bg-red-500 text-white text-sm rounded" onClick={() => handleDelete(t)}>
+                      削除
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -104,5 +127,18 @@ export default function TemplateSelectModal({ isOpen, tagOptions, onSelect, onCl
         </div>
       </Dialog>
     </Transition>
+    {editing && (
+      <TemplateEditModal
+        isOpen={!!editing}
+        template={editing}
+        tagOptions={tagOptions}
+        onSave={() => {
+          setEditing(null);
+          loadTemplates();
+        }}
+        onClose={() => setEditing(null)}
+      />
+    )}
+    </>
   );
 }
