@@ -108,7 +108,7 @@ export default function TemplateSelectModal({ isOpen, tagOptions, onSelect, onCl
                     <button className="px-2 py-1 bg-green-500 text-white text-sm rounded" onClick={() => setEditing(t)}>
                       編集
                     </button>
-                    <button className="px-2 py-1 bg-gray-500 text-white text-sm rounded" onClick={() => setEditing({ ...t, id: 0 })}>
+                    <button className="px-2 py-1 bg-gray-500 text-white text-sm rounded" onClick={() => setEditing({ ...t, id: 0, name: '' })}>
                       複製
                     </button>
                     <button className="px-2 py-1 bg-red-500 text-white text-sm rounded" onClick={() => handleDelete(t)}>
