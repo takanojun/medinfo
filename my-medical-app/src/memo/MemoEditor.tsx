@@ -9,6 +9,7 @@ import ImeTextarea from '../components/ImeTextarea';
 import TagSearchInput from '../components/TagSearchInput';
 import type { Option } from '../components/TagSearchInput';
 import type { MemoItem, MemoTag } from './MemoApp';
+import TemplateEditModal, { TemplateData } from './TemplateEditModal';
 
 interface Props {
   memo: MemoItem;
@@ -27,6 +28,7 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
   const [tags, setTags] = useState<number[]>(memo.tag_ids);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [imageAlt, setImageAlt] = useState<string>('');
+  const [templateEdit, setTemplateEdit] = useState<TemplateData | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resizingIdRef = useRef<string | null>(null);
@@ -180,6 +182,7 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
 
 
   return (
+    <>
     <div
       className="fixed inset-0 bg-black bg-opacity-30 overflow-y-auto flex items-center justify-center z-[70]"
       onMouseDown={(e) => e.stopPropagation()}
@@ -310,18 +313,33 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
             <div className="border p-1 mt-2 space-y-1 relative pr-20">
               {!readOnly && (
                 <div className="absolute top-1 right-1 flex gap-1">
-                  <button
-                    type="button"
-                    className="bg-blue-500 text-white text-xs px-2 py-1 rounded"
-                    onClick={onOpenTemplateSelect}
-                  >
-                    テンプレ
-                  </button>
-                  <button
-                    type="button"
-                    className="bg-blue-500 text-white text-xs px-2 py-1 rounded"
-                    onClick={onOpenTagMaster}
-                  >
+                <button
+                  type="button"
+                  className="bg-blue-500 text-white text-xs px-2 py-1 rounded"
+                  onClick={onOpenTemplateSelect}
+                >
+                  テンプレ
+                </button>
+                <button
+                  type="button"
+                  className="bg-blue-500 text-white text-xs px-2 py-1 rounded"
+                  onClick={() =>
+                    setTemplateEdit({
+                      id: 0,
+                      name: title,
+                      title,
+                      content,
+                      tag_ids: tags,
+                    })
+                  }
+                >
+                  テンプレ保存
+                </button>
+                <button
+                  type="button"
+                  className="bg-blue-500 text-white text-xs px-2 py-1 rounded"
+                  onClick={onOpenTagMaster}
+                >
                     タグ管理
                   </button>
                 </div>
@@ -442,5 +460,15 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
         </div>
       </div>
     </div>
+    {templateEdit && (
+      <TemplateEditModal
+        isOpen={!!templateEdit}
+        template={templateEdit}
+        tagOptions={tagOptions}
+        onSave={() => setTemplateEdit(null)}
+        onClose={() => setTemplateEdit(null)}
+      />
+    )}
+    </>
   );
 }
