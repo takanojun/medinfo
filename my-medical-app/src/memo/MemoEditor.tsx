@@ -193,6 +193,32 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
         )}
         <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0">
           <div className="flex-1 flex flex-col min-h-0">
+            {!readOnly && (
+              <div className="flex gap-1 mb-2 self-start">
+                <button
+                  type="button"
+                  className="bg-blue-500 text-white text-xs px-2 py-1 rounded"
+                  onClick={onOpenTemplateSelect}
+                >
+                  テンプレ
+                </button>
+                <button
+                  type="button"
+                  className="bg-blue-500 text-white text-xs px-2 py-1 rounded"
+                  onClick={() =>
+                    setTemplateEdit({
+                      id: 0,
+                      name: title,
+                      title,
+                      content,
+                      tag_ids: tags,
+                    })
+                  }
+                >
+                  テンプレ保存
+                </button>
+              </div>
+            )}
             <ImeInput
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -313,35 +339,13 @@ export default function MemoEditor({ memo, tagOptions, onSave, onCancel, onOpenT
             <div className="border p-1 mt-2 space-y-1 relative pr-20">
               {!readOnly && (
                 <div className="absolute top-1 right-1 flex gap-1">
-                <button
-                  type="button"
-                  className="bg-blue-500 text-white text-xs px-2 py-1 rounded"
-                  onClick={onOpenTemplateSelect}
-                >
-                  テンプレ
-                </button>
-                <button
-                  type="button"
-                  className="bg-blue-500 text-white text-xs px-2 py-1 rounded"
-                  onClick={() =>
-                    setTemplateEdit({
-                      id: 0,
-                      name: title,
-                      title,
-                      content,
-                      tag_ids: tags,
-                    })
-                  }
-                >
-                  テンプレ保存
-                </button>
-                <button
-                  type="button"
-                  className="bg-blue-500 text-white text-xs px-2 py-1 rounded"
-                  onClick={onOpenTagMaster}
-                >
-                    タグ管理
-                  </button>
+                  <button
+                    type="button"
+                    className="bg-blue-500 text-white text-xs px-2 py-1 rounded"
+                    onClick={onOpenTagMaster}
+                  >
+                      タグ管理
+                    </button>
                 </div>
               )}
               <TagSearchInput
