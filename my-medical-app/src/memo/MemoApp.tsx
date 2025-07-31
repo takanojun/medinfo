@@ -159,7 +159,7 @@ export default function MemoApp({ facilityId, facilityName, initialSelectedId }:
 
   const filtered = memos.filter((m) => {
     if (!showDeleted && m.deleted) return false;
-    if (search && !m.title.includes(search)) return false;
+    if (search && !(m.title.includes(search) || m.content.includes(search))) return false;
     if (tagFilter.length && !tagFilter.every((t) => m.tag_ids.includes(t))) return false;
     return true;
   });
