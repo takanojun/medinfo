@@ -90,6 +90,7 @@ interface Facility {
   emails: ContactInfo[];
   fax?: string;
   remarks?: string;
+  is_deleted?: boolean;
   functions: FacilityFunctionEntry[];
 }
 
@@ -180,6 +181,7 @@ export default function App() {
   const [functionCategoryFilter, setFunctionCategoryFilter] = useState<number | ''>('');
   const [categoryListSearchText, setCategoryListSearchText] = useState('');
   const [categoryListSearchMode, setCategoryListSearchMode] = useState<'AND' | 'OR'>('AND');
+  const [showDeletedFacilities, setShowDeletedFacilities] = useState(false);
   const [showDeletedFunctions, setShowDeletedFunctions] = useState(false);
   const [showDeletedCategories, setShowDeletedCategories] = useState(false);
   const [showFunctionRemarks, setShowFunctionRemarks] = useState(true);
@@ -273,10 +275,15 @@ export default function App() {
     emails: Array.isArray(f.emails) ? f.emails : [],
     fax: f.fax || '',
     remarks: f.remarks || '',
+    is_deleted: f.is_deleted || false,
   });
 
   const fetchFacilities = () =>
-    fetch(`${apiBase}/facilities`)
+    fetch(
+      `${apiBase}/facilities${
+        showDeletedFacilities ? '?include_deleted=true' : ''
+      }`,
+    )
       .then((res) => res.json())
       .then((data) => {
         const list = data.map(normalizeFacility);
@@ -318,7 +325,7 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchFacilities();
-  }, []);
+  }, [showDeletedFacilities]);
 
   useEffect(() => {
     Promise.all([
@@ -488,7 +495,9 @@ export default function App() {
     Promise.all([
       fetch(`${apiBase}/function-categories?include_deleted=true`).then((res) => res.json()),
       fetch(`${apiBase}/functions?include_deleted=true`).then((res) => res.json()),
-      fetch(`${apiBase}/facilities`).then((res) => res.json()),
+      fetch(
+        `${apiBase}/facilities${showDeletedFacilities ? '?include_deleted=true' : ''}`,
+      ).then((res) => res.json()),
     ])
       .then(([catData, funcData, facData]) => {
         setAllCategories(catData);
@@ -998,6 +1007,22 @@ export default function App() {
       .catch((err) => {
         console.error('削除エラー:', err);
         showError('削除に失敗しました');
+      });
+  };
+
+  const handleRestoreFacility = () => {
+    if (!editingFacility || editingFacility.id === 0) return;
+    if (!window.confirm('復元してよろしいですか？')) return;
+    fetch(`${apiBase}/facilities/${editingFacility.id}/restore`, { method: 'PUT' })
+      .then((res) => res.json())
+      .then(() => {
+        setIsFacilityModalOpen(false);
+        setEditingFacility(null);
+        fetchFacilities();
+      })
+      .catch((err) => {
+        console.error('復元エラー:', err);
+        showError('復元に失敗しました');
       });
   };
 
@@ -1527,6 +1552,22 @@ export default function App() {
             />
           </Switch>
           <span>備考表示</span>
+        </label>
+        <label className="flex items-center space-x-2">
+          <Switch
+            checked={showDeletedFacilities}
+            onChange={setShowDeletedFacilities}
+            className={`${
+              showDeletedFacilities ? 'bg-blue-500' : 'bg-gray-300'
+            } relative inline-flex h-6 w-11 items-center rounded-full`}
+          >
+            <span
+              className={`${
+                showDeletedFacilities ? 'translate-x-6' : 'translate-x-1'
+              } inline-block h-4 w-4 transform rounded-full bg-white transition`}
+            />
+          </Switch>
+          <span>削除表示</span>
         </label>
       </div>
 
@@ -2465,12 +2506,21 @@ export default function App() {
                       キャンセル
                     </button>
                     {editingFacility?.id !== 0 && (
-                      <button
-                        onClick={handleDeleteFacility}
-                        className="px-4 py-2 bg-red-500 text-white rounded mr-2"
-                      >
-                        削除
-                      </button>
+                      editingFacility.is_deleted ? (
+                        <button
+                          onClick={handleRestoreFacility}
+                          className="px-4 py-2 bg-green-500 text-white rounded mr-2"
+                        >
+                          復元
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleDeleteFacility}
+                          className="px-4 py-2 bg-red-500 text-white rounded mr-2"
+                        >
+                          削除
+                        </button>
+                      )
                     )}
                     <button
                       onClick={handleSaveFacility}

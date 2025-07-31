@@ -20,16 +20,20 @@ def get_db():
 
 # 医療機関一覧を取得（GET /facilities）
 @router.get("", response_model=List[schemas.MedicalFacility])
-def read_facilities(skip: int = 0, limit: int | None = None, db: Session = Depends(get_db)):
+def read_facilities(
+    skip: int = 0,
+    limit: int | None = None,
+    include_deleted: bool = False,
+    db: Session = Depends(get_db),
+):
     """
     医療機関情報の一覧を取得するAPI。
     ページネーションとして skip / limit を指定可能。
     """
-    query = (
-        db.query(models.MedicalFacility)
-        .filter(models.MedicalFacility.is_deleted == False)
-        .offset(skip)
-    )
+    query = db.query(models.MedicalFacility)
+    if not include_deleted:
+        query = query.filter(models.MedicalFacility.is_deleted == False)
+    query = query.offset(skip)
     if limit is not None:
         query = query.limit(limit)
     facilities = query.all()
@@ -96,3 +100,21 @@ def delete_facility(facility_id: int, db: Session = Depends(get_db)):
     db_facility.is_deleted = True
     db.commit()
     return {"message": "Facility deleted successfully"}
+
+
+@router.put("/{facility_id}/restore", response_model=schemas.MedicalFacility)
+def restore_facility(facility_id: int, db: Session = Depends(get_db)):
+    db_facility = (
+        db.query(models.MedicalFacility)
+        .filter(
+            models.MedicalFacility.id == facility_id,
+            models.MedicalFacility.is_deleted == True,
+        )
+        .first()
+    )
+    if not db_facility:
+        raise HTTPException(status_code=404, detail="Facility not found")
+    db_facility.is_deleted = False
+    db.commit()
+    db.refresh(db_facility)
+    return db_facility
