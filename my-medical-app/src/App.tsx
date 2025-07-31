@@ -90,7 +90,7 @@ interface Facility {
   emails: ContactInfo[];
   fax?: string;
   remarks?: string;
-  is_deleted?: boolean;
+  is_deleted: boolean;
   functions: FacilityFunctionEntry[];
 }
 
@@ -275,7 +275,7 @@ export default function App() {
     emails: Array.isArray(f.emails) ? f.emails : [],
     fax: f.fax || '',
     remarks: f.remarks || '',
-    is_deleted: f.is_deleted || false,
+    is_deleted: f.is_deleted ?? false,
   });
 
   const fetchFacilities = () =>
@@ -1454,6 +1454,7 @@ export default function App() {
                     emails: [],
                     fax: '',
                     remarks: '',
+                    is_deleted: false,
                     functions: [],
                   });
                   setIsFacilityModalOpen(true);

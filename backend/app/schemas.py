@@ -83,6 +83,7 @@ class MedicalFacilityBase(BaseModel):
 
 class MedicalFacility(MedicalFacilityBase):
     id: int
+    is_deleted: bool
     functions: List[FacilityFunctionEntryBase] = []
 
     class Config:
