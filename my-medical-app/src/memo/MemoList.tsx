@@ -195,7 +195,7 @@ export default function MemoList({
           type="text"
           value={search}
           onChange={(e) => onSearch(e.target.value)}
-          placeholder="タイトル検索"
+          placeholder="タイトル・内容検索"
           className="border p-1 flex-1 mr-2"
         />
         <label className="flex items-center text-sm">
