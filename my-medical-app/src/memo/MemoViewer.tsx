@@ -122,10 +122,11 @@ export default function MemoViewer({ memo, tagOptions, childMemos = [], onEdit, 
             {childMemos.map((c) => (
               <li
                 key={c.id}
-                className="text-blue-600 cursor-pointer"
+                className={`cursor-pointer ${c.deleted ? 'text-gray-500 line-through' : 'text-blue-600'}`}
                 onClick={() => onSelectMemo && onSelectMemo(c.id)}
               >
                 {c.title}
+                {c.deleted && ' (削除済み)'}
               </li>
             ))}
           </ul>
