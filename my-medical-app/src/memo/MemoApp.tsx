@@ -181,7 +181,9 @@ export default function MemoApp({ facilityId, facilityName, initialSelectedId }:
   const finalList = memos.filter((m) => visibleIds.has(m.id));
 
   const selected = memos.find((m) => m.id === selectedId) || null;
-  const childMemos = selected ? memos.filter((m) => m.parent_id === selected.id) : [];
+  const childMemos = selected
+    ? memos.filter((m) => m.parent_id === selected.id && (showDeleted || !m.deleted))
+    : [];
 
   const handleCreate = () => {
     const memo: MemoItem = {
