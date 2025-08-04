@@ -1613,9 +1613,16 @@ export default function App() {
             <tr className="text-left">
               {visibleColumnInfo.map((info, idx) => {
                 if (info.key.endsWith('-collapsed')) {
-                  const collapsedLabel =
-                    info.key === `${STICKY_GROUP_ID}-collapsed`
-                      ? columns.find((c) => c.key === 'short_name')?.label || '略名'
+                  const isFacilityCollapsed =
+                    info.key === `${STICKY_GROUP_ID}-collapsed`;
+                  const collapsedLabel = isFacilityCollapsed
+                    ? columns.find((c) => c.key === 'short_name')?.label || '略名'
+                    : '';
+                  const sortIndicator =
+                    isFacilityCollapsed && sortKey === 'short_name' && sortOrder !== 'none'
+                      ? sortOrder === 'asc'
+                        ? '▲'
+                        : '▼'
                       : '';
                   return (
                     <th
@@ -1623,7 +1630,12 @@ export default function App() {
                         if (el) headerRefs.current[idx] = el;
                       }}
                       key={info.key}
-                      className="py-2 px-4 border whitespace-nowrap"
+                      className={`py-2 px-4 border whitespace-nowrap${
+                        isFacilityCollapsed ? ' cursor-pointer' : ''
+                      }`}
+                      onClick={
+                        isFacilityCollapsed ? () => handleSort('short_name') : undefined
+                      }
                       style={
                         idx < stickyColumnCount
                           ? ({
@@ -1636,6 +1648,7 @@ export default function App() {
                       }
                     >
                       {collapsedLabel}
+                      {sortIndicator && ` ${sortIndicator}`}
                     </th>
                   );
                 }
@@ -1687,14 +1700,20 @@ export default function App() {
               >
                 {visibleColumnInfo.map((info, idx) => {
                   if (info.key.endsWith('-collapsed')) {
-                    const collapsedContent =
-                      info.key === `${STICKY_GROUP_ID}-collapsed`
-                        ? facility.short_name
-                        : '';
+                    const isFacilityCollapsed =
+                      info.key === `${STICKY_GROUP_ID}-collapsed`;
+                    const collapsedContent = isFacilityCollapsed
+                      ? facility.short_name
+                      : '';
                     return (
                       <td
                         key={`${facility.id}-${info.key}`}
                         className="py-2 px-4 border"
+                        onContextMenu={
+                          isFacilityCollapsed
+                            ? (e) => handleFacilityCellRightClick(e, facility)
+                            : undefined
+                        }
                         style={
                           idx < stickyColumnCount
                             ? ({
